@@ -23,8 +23,7 @@ import (
 	"bytes"
 	"log"
 
-	"github.com/pydio/pydio-booster/io"
-	"github.com/pydio/go/io"
+	pydio "github.com/pydio/pydio-booster/io"
 )
 
 // Job definition for the uploader

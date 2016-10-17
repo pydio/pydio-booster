@@ -35,12 +35,10 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
-	"github.com/pydio/pydio-booster/http"
-	"github.com/pydio/pydio-booster/io"
+	pydhttp "github.com/pydio/pydio-booster/http"
+	pydio "github.com/pydio/pydio-booster/io"
 	"github.com/pydio/pydio-booster/server/middleware/pydiomiddleware"
 	pydiows "github.com/pydio/pydio-booster/websocket"
-	"github.com/pydio/go/io"
-	"github.com/pydio/go/http"
 )
 
 const (

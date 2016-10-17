@@ -24,8 +24,7 @@ import (
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"github.com/pydio/pydio-booster/server/middleware/pydiomiddleware"
 
-	"github.com/pydio/pydio-booster/worker"
-	"github.com/pydio/go/worker"
+	pydioworker "github.com/pydio/pydio-booster/worker"
 )
 
 func init() {

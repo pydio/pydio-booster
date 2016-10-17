@@ -26,9 +26,8 @@ import (
 	"time"
 
 	"github.com/pydio/pydio-booster/com"
-	"github.com/pydio/pydio-booster/io"
+	pydio "github.com/pydio/pydio-booster/io"
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/pydio/go/io"
 )
 
 var (

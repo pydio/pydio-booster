@@ -26,10 +26,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pydio/pydio-booster/io"
+	pydio "github.com/pydio/pydio-booster/io"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/pydio/go/io"
 )
 
 func compareContents(filename string, contents []byte) {

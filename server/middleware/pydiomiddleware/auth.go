@@ -27,10 +27,8 @@ import (
 	"net/url"
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
-	"github.com/pydio/pydio-booster/http"
-	"github.com/pydio/pydio-booster/worker"
-	"github.com/pydio/go/worker"
-	"github.com/pydio/go/http"
+	pydhttp "github.com/pydio/pydio-booster/http"
+	pydioworker "github.com/pydio/pydio-booster/worker"
 )
 
 // AuthJob definition for the uploader

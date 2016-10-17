@@ -25,8 +25,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/pydio/pydio-booster/io"
-	"github.com/pydio/go/io"
+	pydio "github.com/pydio/pydio-booster/io"
 )
 
 // Open local file node

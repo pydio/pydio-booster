@@ -28,8 +28,7 @@ import (
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"github.com/pydio/pydio-booster/encoding/path"
-	"github.com/pydio/pydio-booster/worker"
-	"github.com/pydio/go/worker"
+	pydioworker "github.com/pydio/pydio-booster/worker"
 )
 
 // NodeJob definition for the uploader

@@ -31,10 +31,9 @@ import (
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 
-	"github.com/pydio/pydio-booster/http"
-	"github.com/pydio/pydio-booster/io"
-	"github.com/pydio/pydio-booster/worker"
-	"github.com/pydio/go/worker"
+	pydhttp "github.com/pydio/pydio-booster/http"
+	pydio "github.com/pydio/pydio-booster/io"
+	pydioworker "github.com/pydio/pydio-booster/worker"
 )
 
 // Handler for the pydio middleware
