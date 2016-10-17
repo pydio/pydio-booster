@@ -1,0 +1,6 @@
+http://localhost {
+    root /Users/ghecquet/pydio.dev/pydio-core/core/src/
+
+    fastcgi / 127.0.0.1:9000 php
+    uploader /upload
+}

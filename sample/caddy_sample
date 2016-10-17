@@ -1,0 +1,23 @@
+http://pydio.dev:8090 {
+    header /io {
+        Access-Control-Allow-Origin http://pydio.dev
+        Access-Control-Request-Headers *
+        Access-Control-Allow-Methods POST
+        Access-Control-Allow-Headers Range
+        Access-Control-Allow-Credentials true
+    }
+    pydioauth /io http://pydio.dev?get_action=keystore_generate_auth_token&device=upload
+    pydiopre /io http://pydio.dev/api/{repo}/upload/put {
+        header X-File-Direct-Upload request-options
+    }
+    pydioupload /io
+    pydiopost /io http://pydio.dev/api/{repo}/upload/put?XDEBUG_SESSION_START=phpstorm {
+        header X-File-Direct-Upload upload-finished
+    }
+}
+http://pydio.dev:8191 {
+    header /ws
+    pydioauth /ws
+    pydiopre /ws http://pydio.dev/api/pydio/ws_authenticate/?key=totototo
+    pydiows /ws
+}

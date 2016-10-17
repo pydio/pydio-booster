@@ -1,0 +1,14 @@
+package: github.com/pydio/pydio-booster
+import:
+- package: github.com/mholt/caddy
+  version: 0.9.2
+- package: github.com/nsqio/go-nsq
+- package: github.com/aws/aws-sdk-go
+- package: github.com/dgrijalva/jwt-go
+  version: v2.7.0
+- package: github.com/BurntSushi/toml
+  version: v0.2.0
+- package: github.com/gorilla/context
+- package: github.com/jasonlvhit/gocron
+  version: 42a5804d37aa0b9239b265e894a16b8edbf52d54
+- package: github.com/garyburd/redigo/redis

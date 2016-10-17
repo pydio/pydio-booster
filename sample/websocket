@@ -1,0 +1,8 @@
+# WebSocket Configuration Template
+http://<WEBISTE_URL>:5000 {
+
+    # Setting up a websocket server
+    pydioauth /client <API_URL>/api/pydio/ws_authenticate <WEBSITE_URL>?get_action=keystore_generate_auth_token
+    pydiows /client
+}
+
