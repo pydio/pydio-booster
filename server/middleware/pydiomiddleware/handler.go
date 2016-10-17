@@ -267,11 +267,14 @@ type (
 
 	// ProxyQuery json
 	ProxyQuery struct {
-		Key         string `json:"key"`
-		ClientID    string `json:"client"`
-		SourceURL   string `json:"source_url"`
-		ShortenType string `json:"shorten_type"`
-		PublicURL   string `json:"public_url"`
+		Key              string `json:"key"`
+		ClientID         string `json:"client"`
+		Hash             string `json:"hash"`
+		Base             string `json:"base"`
+		MainEndpoint     string `json:"main_endpoint"`
+		DownloadEndpoint string `json:"dl_endpoint"`
+		ShortenType      string `json:"shorten_type"`
+		PublicURL        string `json:"public_url"`
 	}
 
 	// ClientQuery json
