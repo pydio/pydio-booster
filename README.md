@@ -1,10 +1,10 @@
-# Pydio *NAME-TO-FIND* project
+# Pydio Booster
 
 Golang tools to improve admin experience on both deployment and performance.
 
 Download binaries directly at :
 
-    http://sandbox.pydio.com/binaries/
+    https://download.pydio.com/pub/booster
 
 Dependencies : 
     
@@ -21,5 +21,3 @@ To build for a machine :
 
     git clone https://github.com/pydio/go.git ${GOPATH}/src/github.com/pydio/go
     ${GOPATH}/src/github.com/pydio/pydio-booster/build/build.sh --machines "darwin|386" --dir ${GOPATH}/bin --force
-
-EOF
