@@ -53,67 +53,72 @@ type SchedulerConf struct {
 	Minutes int
 }
 
+// Configurer interface
+type Configurer interface {
+	GetCaddyFilePath() string
+	SetCaddyFilePath(string)
+	SetCaddyFile(caddy.Input)
+}
+
 // Configuration object
 type Configuration struct {
 	CaddyFilePath string
-	Scheduler     SchedulerConf
-	Nsq           NsqConf
 	CaddyFile     caddy.Input
 }
 
 // LoadConfigurationFile into the caddy main file
-func LoadConfigurationFile(confFilePath string) (*Configuration, error) {
+func LoadConfigurationFile(confFilePath string, configuration Configurer) error {
 
 	file, _ := os.Open(confFilePath)
 	decoder := json.NewDecoder(file)
-	configuration := &Configuration{}
 	err := decoder.Decode(configuration)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if strings.HasPrefix(configuration.CaddyFilePath, "./") {
+	caddyFilePath := configuration.GetCaddyFilePath()
+
+	if strings.HasPrefix(caddyFilePath, "./") {
 		// Simply look for caddy file in the same folder as main config file
 		confFilePathDir := filepath.Dir(confFilePath)
-		caddyFileName := filepath.Base(configuration.CaddyFilePath)
-		configuration.CaddyFilePath = filepath.Join(confFilePathDir, caddyFileName)
+		caddyFileName := filepath.Base(caddyFilePath)
+		configuration.SetCaddyFilePath(filepath.Join(confFilePathDir, caddyFileName))
 	}
+
 	err = loadCaddyfile(configuration)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return configuration, nil
+	return nil
 }
 
-func loadCaddyfile(configuration *Configuration) error {
-	conf := configuration.CaddyFilePath
+func loadCaddyfile(configuration Configurer) error {
+
+	conf := configuration.GetCaddyFilePath()
+
 	// Try -conf flag
 	if conf != "" {
-		if conf == "stdin" {
-			configuration.CaddyFile, _ = caddy.CaddyfileFromPipe(os.Stdin, "http")
-			return nil
-		}
-
 		contents, err := ioutil.ReadFile(conf)
 		if err != nil {
 			return err
 		}
 
-		configuration.CaddyFile = caddy.CaddyfileInput{
+		configuration.SetCaddyFile(caddy.CaddyfileInput{
 			Contents:       contents,
 			Filepath:       conf,
 			ServerTypeName: "http",
-		}
+		})
 		return nil
 	}
 
 	// command line args
 	if flag.NArg() > 0 {
 		confBody := httpserver.Host + ":" + httpserver.Port + "\n" + strings.Join(flag.Args(), "\n")
-		configuration.CaddyFile = caddy.CaddyfileInput{
+
+		configuration.SetCaddyFile(caddy.CaddyfileInput{
 			Contents: []byte(confBody),
 			Filepath: "args",
-		}
+		})
 		return nil
 	}
 
@@ -121,15 +126,33 @@ func loadCaddyfile(configuration *Configuration) error {
 	contents, err := ioutil.ReadFile(caddy.DefaultConfigFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			configuration.CaddyFile = caddy.DefaultInput("http")
+			configuration.SetCaddyFile(caddy.DefaultInput("http"))
+
 			return nil
 		}
 		return err
 	}
-	configuration.CaddyFile = caddy.CaddyfileInput{
+
+	configuration.SetCaddyFile(caddy.CaddyfileInput{
 		Contents:       contents,
 		Filepath:       caddy.DefaultConfigFile,
 		ServerTypeName: "http",
-	}
+	})
+
 	return nil
+}
+
+// GetCaddyFilePath from config
+func (c *Configuration) GetCaddyFilePath() string {
+	return c.CaddyFilePath
+}
+
+// SetCaddyFilePath for config
+func (c *Configuration) SetCaddyFilePath(str string) {
+	c.CaddyFilePath = str
+}
+
+// SetCaddyFile for config
+func (c *Configuration) SetCaddyFile(input caddy.Input) {
+	c.CaddyFile = input
 }

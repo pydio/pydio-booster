@@ -43,6 +43,14 @@ import (
 	_ "github.com/pydio/pydio-booster/server/middleware/pydiows"
 )
 
+// Configuration object
+type Configuration struct {
+	conf.Configuration
+
+	Scheduler conf.SchedulerConf
+	Nsq       conf.NsqConf
+}
+
 // Flags that control program flow or startup
 var (
 	pydioconf string
@@ -52,15 +60,6 @@ var (
 	version   bool
 	plugins   bool
 )
-
-var directives = []string{
-	"header",
-	"basicauth",
-	"pydioadmin",
-	"pydioupload",
-	"pydiows",
-	"websocket",
-}
 
 func init() {
 	caddy.TrapSignals()
@@ -75,7 +74,6 @@ func init() {
 	flag.BoolVar(&caddy.Quiet, "quiet", false, "Quiet mode (no initialization output)")
 	flag.StringVar(&revoke, "revoke", "", "Hostname for which to revoke the certificate")
 	flag.BoolVar(&version, "version", false, "Show version")
-
 }
 
 func main() {
@@ -98,18 +96,20 @@ func main() {
 		os.Exit(0)
 	}
 
-	config, err := conf.LoadConfigurationFile(pydioconf)
+	config := &Configuration{}
+	err := conf.LoadConfigurationFile(pydioconf, config)
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Start your engines
-	instance, err := caddy.Start(config.CaddyFile)
+	instance, err := caddy.Start(config.Configuration.CaddyFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if(config.Nsq != conf.NsqConf{}){
+	if (config.Nsq != conf.NsqConf{}) {
 		// Starting the COM
 		defer func() {
 			com.Close()
@@ -118,7 +118,7 @@ func main() {
 		com.NewCom(&config.Nsq)
 	}
 
-	if(config.Scheduler != conf.SchedulerConf{}){
+	if (config.Scheduler != conf.SchedulerConf{}) {
 		scheduler.NewScheduler(&config.Scheduler)
 	}
 
