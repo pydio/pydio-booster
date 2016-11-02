@@ -24,6 +24,9 @@ import (
 	"crypto/tls"
 	"errors"
 	"net/http"
+	"net/url"
+
+	"github.com/pydio/pydio-booster/log"
 )
 
 var (
@@ -53,12 +56,18 @@ func NewClient() *Client {
 func (c *Client) Do(req *http.Request) (resp *http.Response, err error) {
 	resp, err = (*http.Client)(c).Do(req)
 
+	if urlError, ok := err.(*url.Error); ok && urlError.Err == ErrRedirectViaPydioClient {
+		log.Debugf("The url needs to be redirected")
+		err = nil
+	}
+
 	if err != nil {
 		return
 	}
 
 	if shouldRedirectGet(resp.StatusCode) {
 		if loc, err := resp.Location(); err == nil {
+			log.Debugf("Handling new location %s", loc)
 			req.URL = loc
 			return c.Do(req)
 		}
