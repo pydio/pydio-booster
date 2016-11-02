@@ -1,3 +1,4 @@
+// Package pydioupload contains the logic for the pydioupload caddy directive
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -21,7 +22,6 @@ package pydioupload
 
 import (
 	"bytes"
-	"log"
 
 	pydio "github.com/pydio/pydio-booster/io"
 )
@@ -42,7 +42,7 @@ func (j *Job) Do() (err error) {
 
 	_, err = j.File.WriteAt(j.Buf.Bytes(), j.Offset)
 	if err != nil {
-		log.Println("Error here", err)
+		logger.Errorln(err)
 		return err
 	}
 

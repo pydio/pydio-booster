@@ -1,4 +1,4 @@
-/*
+/*Package main Websocket
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
  *
@@ -73,8 +73,7 @@ func main() {
 		select {
 		case err := <-connection.ExitChan:
 			log.Println("Error :", err)
+			break
 		}
 	}
-
-	log.Println("Ending connection")
 }

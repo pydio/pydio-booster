@@ -1,4 +1,4 @@
-/*
+/*Package com controls the communication layer of the Pydio app
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
  *
@@ -51,8 +51,6 @@ func NewConsumer(topic string, channel string) (*Consumer, error) {
 		return nil, err
 	}
 
-	opts := getOptions()
-
 	c := &Consumer{
 		URL:       opts.TCPAddress,
 		Topic:     topic,
@@ -77,7 +75,7 @@ func (c *Consumer) Start() error {
 		return err
 	}
 
-	// Making sure the consumer stops if nsq if everything stops
+	// Making sure the consumer stops if everything stops
 	go func() {
 		defer c.queue.Stop()
 

@@ -1,3 +1,4 @@
+// Package pydiows contains the logic for the pydiows caddy directive
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -27,7 +28,6 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
@@ -80,7 +80,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 			err := errHandle(ctx, handle(w, r, &sockconfig))
 
 			if err != nil {
-				log.Println("PydioWS returns an error : ", err)
+				logger.Errorln("PydioWS returns an error : ", err)
 
 				return http.StatusUnauthorized, err
 			}
@@ -115,7 +115,7 @@ func errHandle(ctx context.Context, f func() error) error {
 // It also spawns the child process that is associated with matched HTTP path/url.
 func handle(w http.ResponseWriter, r *http.Request, config *Config) func() error {
 	return func() error {
-		log.Println("PydioWS : handler START")
+		logger.Infoln("PydioWS : handler START")
 
 		var conn *websocket.Conn
 		var err error
@@ -129,24 +129,24 @@ func handle(w http.ResponseWriter, r *http.Request, config *Config) func() error
 		ctx := r.Context()
 
 		// Retrieving the node
-		log.Println("PydioWS : get context user")
+		logger.Debugln("PydioWS : get context user")
 		var user = &pydio.User{}
 
 		if err = pydhttp.FromContext(ctx, "user", user); err != nil {
-			log.Println("Could not decode to User ", err)
+			logger.Errorln("Could not decode to User ", err)
 			return err
 		}
-		log.Println("PydioWS : got context user ", user)
+		logger.Debugln("PydioWS : got context user ", user)
 
-		log.Println("PydioWS : Upgrader")
+		logger.Debugln("PydioWS : Upgrader")
 		conn, err = upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Println("Error upgrading ", err)
+			logger.Errorln("Error upgrading ", err)
 			return err
 		}
 
 		defer conn.Close()
-		log.Println("PydioWS : Upgraded")
+		logger.Infoln("PydioWS : Upgraded")
 
 		// Request Read / Writer
 		reqr, reqw := io.Pipe()
@@ -167,7 +167,7 @@ func handle(w http.ResponseWriter, r *http.Request, config *Config) func() error
 
 		reqw.Close() // close stdin to end the process
 
-		log.Println("We're here")
+		logger.Debugln("Closed the websocket")
 
 		select {
 		case <-connection.ExitChan:
@@ -175,7 +175,7 @@ func handle(w http.ResponseWriter, r *http.Request, config *Config) func() error
 			<-done
 		}
 
-		log.Println("PydioWS : handler END")
+		logger.Infoln("PydioWS : handler END")
 
 		return nil
 	}

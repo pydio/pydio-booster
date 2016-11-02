@@ -1,3 +1,4 @@
+// Package pydioupload contains the logic for the pydioupload caddy directive
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -20,20 +21,23 @@
 package pydioupload
 
 import (
-	"log"
-
 	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 
+	pydiolog "github.com/pydio/pydio-booster/log"
 	"github.com/pydio/pydio-booster/server/middleware/pydiomiddleware"
 	pydioworker "github.com/pydio/pydio-booster/worker"
 )
+
+var logger *pydiolog.Logger
 
 func init() {
 	caddy.RegisterPlugin("pydioupload", caddy.Plugin{
 		ServerType: "http",
 		Action:     setup,
 	})
+
+	logger = pydiolog.New(pydiolog.GetLevel(), "[pydioupload] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
 }
 
 // Setup configures a new PydioUpload instance.
@@ -46,7 +50,7 @@ func setup(c *caddy.Controller) error {
 		return err
 	}
 
-	log.Println("Got middleware Rules ", middlewareRules)
+	logger.Debugln("Got middleware Rules ", middlewareRules)
 
 	dispatcher := pydioworker.NewDispatcher(900)
 	dispatcher.Run()

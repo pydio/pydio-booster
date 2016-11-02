@@ -1,3 +1,4 @@
+// Package pydhttp contains all http related work
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -21,7 +22,6 @@ package pydhttp
 
 // Result structure
 import (
-	"log"
 	"net/http"
 
 	"golang.org/x/net/context"
@@ -54,9 +54,6 @@ func NewStatusOK(r *http.Request, context ...context.Context) *Status {
 
 // NewStatusErr response
 func NewStatusErr(code int, err error) *Status {
-
-	log.Printf("Responding with error code %d - %s", code, err)
-
 	return &Status{
 		Context:    nil,
 		StatusCode: code,

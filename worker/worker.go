@@ -1,3 +1,4 @@
+// Package pydioworker contains the logic for creating a worker routine
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -19,7 +20,15 @@
  */
 package pydioworker
 
-import "log"
+import (
+	pydiolog "github.com/pydio/pydio-booster/log"
+)
+
+var log *pydiolog.Logger
+
+func init() {
+	log = pydiolog.New(pydiolog.GetLevel(), "[worker] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
+}
 
 // Job interface
 type Job interface {
@@ -53,7 +62,7 @@ func (w Worker) Start() {
 			case job := <-w.JobChannel:
 				// we have received a work request.
 				if err := job.Do(); err != nil {
-					log.Printf("[ERROR:WORKER] Worker's job failed: %s", err.Error())
+					log.Errorf("Worker's job failed: %s", err.Error())
 				}
 
 			case <-w.quit:

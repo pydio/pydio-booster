@@ -1,4 +1,4 @@
-/*
+/*package main Pydio
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
  *
@@ -22,8 +22,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"io/ioutil"
 	"os"
+
+	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 
 	"runtime"
 
@@ -32,6 +34,7 @@ import (
 	"github.com/mholt/caddy/caddytls"
 	"github.com/pydio/pydio-booster/com"
 	"github.com/pydio/pydio-booster/conf"
+	"github.com/pydio/pydio-booster/log"
 	"github.com/pydio/pydio-booster/scheduler"
 
 	// List of plugins used in the soft
@@ -49,12 +52,14 @@ type Configuration struct {
 
 	Scheduler conf.SchedulerConf
 	Nsq       conf.NsqConf
+	Log       conf.LogConf
 }
 
 // Flags that control program flow or startup
 var (
 	pydioconf string
 	cpu       string
+	loglevel  int
 	logfile   string
 	revoke    string
 	version   bool
@@ -69,7 +74,8 @@ func init() {
 	flag.StringVar(&cpu, "cpu", "100%", "CPU cap")
 	flag.BoolVar(&plugins, "plugins", false, "List installed plugins")
 	flag.StringVar(&caddytls.DefaultEmail, "email", "", "Default Let's Encrypt account email address")
-	flag.StringVar(&logfile, "log", "", "Process log file")
+	flag.IntVar(&loglevel, "loglevel", 9, "Log level")
+	flag.StringVar(&logfile, "log", "stdout", "Process log file")
 	flag.StringVar(&caddy.PidFile, "pidfile", "", "Path to write pid file")
 	flag.BoolVar(&caddy.Quiet, "quiet", false, "Quiet mode (no initialization output)")
 	flag.StringVar(&revoke, "revoke", "", "Hostname for which to revoke the certificate")
@@ -100,14 +106,41 @@ func main() {
 	err := conf.LoadConfigurationFile(pydioconf, config)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Errorln(err)
+		os.Exit(2)
 	}
 
 	// Start your engines
 	instance, err := caddy.Start(config.Configuration.CaddyFile)
 	if err != nil {
-		log.Fatal(err)
+		log.Errorln(err)
+		os.Exit(2)
 	}
+
+	if (config.Log != conf.LogConf{}) {
+		logfile = config.Log.File
+		loglevel = config.Log.Level
+	}
+
+	switch logfile {
+	case "stdout":
+		log.SetOutput(os.Stdout)
+	case "stderr":
+		log.SetOutput(os.Stderr)
+	case "":
+		log.SetOutput(ioutil.Discard)
+	default:
+		log.SetOutput(&lumberjack.Logger{
+			Filename:   logfile,
+			MaxSize:    100,
+			MaxAge:     14,
+			MaxBackups: 10,
+		})
+	}
+
+	log.SetLevel(loglevel)
+
+	log.Infof("Set log level to %d", loglevel)
 
 	if (config.Nsq != conf.NsqConf{}) {
 		// Starting the COM
@@ -125,5 +158,5 @@ func main() {
 	// Twiddle your thumbs
 	instance.Wait()
 	com.StopProducer()
-	log.Println("Exiting without listening!!")
+	log.Infoln("Exiting without listening!!")
 }

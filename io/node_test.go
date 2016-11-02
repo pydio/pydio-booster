@@ -1,3 +1,4 @@
+// Package pydio contains all objects needed by the Pydio system
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.

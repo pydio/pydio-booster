@@ -1,3 +1,4 @@
+// Package scheduler contains the logic to run a scheduler task in the Pydio system
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -23,22 +24,27 @@ import (
 	"net/http"
 
 	"io"
-	"log"
 	"net/url"
 	"os"
 
 	"github.com/jasonlvhit/gocron"
 	pydconf "github.com/pydio/pydio-booster/conf"
 	pydhttp "github.com/pydio/pydio-booster/http"
+	pydiolog "github.com/pydio/pydio-booster/log"
 )
 
 var (
 	schedulerConf *pydconf.SchedulerConf
+	log           *pydiolog.Logger
 )
+
+func init() {
+	log = pydiolog.New(pydiolog.GetLevel(), "[scheduler] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
+}
 
 func pydioMasterScheduler() {
 
-	log.Println("Triggering pydio scheduler master command")
+	log.Infoln("Triggering pydio scheduler master command")
 
 	host := schedulerConf.Host
 	tokenP := schedulerConf.TokenP
@@ -46,7 +52,7 @@ func pydioMasterScheduler() {
 
 	url, err := url.Parse(host + "/api/ajxp_conf/scheduler_runAll")
 	if err != nil {
-		log.Printf("Error parsing url, exiting task")
+		log.Errorln("Error parsing url, exiting task")
 		return
 	}
 
@@ -58,26 +64,28 @@ func pydioMasterScheduler() {
 	values.Add("auth_token", args.Token)
 	url.RawQuery = values.Encode()
 
-	//log.Printf("URL is -%s- -%s- ", url.Path, url.String())
+	log.Debugf("URL is -%s- -%s- ", url.Path, url.String())
 
 	request, _ := http.NewRequest("GET", url.String(), nil)
-	//log.Println("Sending request ", request)
+
+	log.Debugln("Sending request ", request)
 
 	client := pydhttp.NewClient()
 	response, err := client.Do(request)
 
 	if err != nil {
-		log.Printf("Error while trying to execute request")
+		log.Errorf("Error while trying to execute request")
 	} else {
 		defer response.Body.Close()
 		_, err := io.Copy(os.Stdout, response.Body)
 		if err != nil {
-			log.Printf("Error while reading request response body")
+			log.Errorf("Error while reading request response body")
 		}
 	}
 
 }
 
+// NewScheduler to run
 func NewScheduler(conf *pydconf.SchedulerConf) error {
 
 	schedulerConf = conf

@@ -1,3 +1,4 @@
+// Package pydhttp contains all http related work
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -26,7 +27,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -69,7 +69,6 @@ func NewTokenFromURLWithCookie(url *url.URL, cookie *http.Cookie) (token *Token,
 
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(token); err != nil {
-		log.Println("Could not decrypt token", err)
 		return nil, errors.New("NewTokenFromURLWithCookie: Could not decrypt token ")
 	}
 

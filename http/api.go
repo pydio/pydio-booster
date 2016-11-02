@@ -1,5 +1,5 @@
-/*
- * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
+// Package pydhttp contains all http related work
+/* Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
  *
  * Pydio is free software: you can redistribute it and/or modify

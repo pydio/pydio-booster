@@ -1,4 +1,4 @@
-/*
+/*Package com controls the communication layer of the Pydio app
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
  *
@@ -22,12 +22,12 @@ package com
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 
 	"github.com/nsqio/nsq/nsqd"
 	pydioconf "github.com/pydio/pydio-booster/conf"
+	"github.com/pydio/pydio-booster/log"
 )
 
 // Message standard structure for communication
@@ -68,11 +68,14 @@ func NewCom(conf *pydioconf.NsqConf) error {
 	httpPort := GetNextAvailablePort(tcpPort + 1)
 	opts.HTTPAddress = tcpHost + ":" + strconv.Itoa(httpPort)
 
+	opts.Logger = log.New(log.INFO, "[nsqd] ", log.Ldate|log.Ltime|log.Lmicroseconds)
+
 	//opts.NSQLookupdTCPAddresses = []string{"0.0.0.0:4160"}
 
 	nsqd := nsqd.New(opts)
 
-	log.Printf("Starting NSQ on port %d and %d\n", tcpPort, httpPort)
+	log.Infof("[com] Starting NSQ on port %d and %d\n", tcpPort, httpPort)
+
 	nsqd.Main()
 
 	unique.running = true

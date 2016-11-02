@@ -1,3 +1,4 @@
+// Package pydio contains all objects needed by the Pydio system
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -22,7 +23,6 @@ package pydio
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path"
 
@@ -89,8 +89,6 @@ func (n *Node) String() string {
 func (n *Node) Read(p []byte) (int, error) {
 
 	data, err := json.Marshal(n)
-
-	log.Printf("Reading got an %s %v ", data, err)
 
 	numBytes := copy(p, data)
 

@@ -1,5 +1,5 @@
-/*
- * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
+// Package pydhttp contains all http related work
+/* Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
  *
  * Pydio is free software: you can redistribute it and/or modify
@@ -24,7 +24,6 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"log"
 
 	"golang.org/x/net/context"
 )
@@ -42,9 +41,6 @@ type ContextValue struct {
 
 // NewContext with the key value
 func NewContext(ctx context.Context, key string, value interface{}) context.Context {
-
-	log.Printf("Saving %s - %v", key, value)
-
 	return context.WithValue(ctx, key, value)
 }
 
@@ -54,9 +50,6 @@ func FromContext(ctx context.Context, key string, value interface{}) (err error)
 	if reader, ok := ctx.Value(key).(io.Reader); ok {
 		dec := json.NewDecoder(reader)
 		err = dec.Decode(value)
-
-		log.Printf("Getting %s - %v - %v", key, ctx.Value(key), err)
-
 	} else {
 		err = errors.New("Cannot convert this thing to io.Reader")
 	}

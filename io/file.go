@@ -1,3 +1,4 @@
+// Package pydio contains all objects needed by the Pydio system
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -21,7 +22,6 @@ package pydio
 
 import (
 	"io"
-	"log"
 	"sync"
 )
 
@@ -78,7 +78,6 @@ func (f *File) String() string {
 // Close pipe
 func (f *File) Close() {
 	if f.Writer != nil {
-
 		// Waiting for all potential tasks to be finished
 		f.Wait()
 
@@ -90,8 +89,6 @@ func (f *File) Close() {
 		}()
 
 		f.Writer.Close()
-	} else {
-		log.Println("Empty")
 	}
 }
 

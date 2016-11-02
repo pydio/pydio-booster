@@ -1,3 +1,4 @@
+// Package localio contains logic for dealing with local files
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -21,12 +22,18 @@ package localio
 
 import (
 	"io"
-	"log"
 	"os"
 	"path"
 
 	pydio "github.com/pydio/pydio-booster/io"
+	pydiolog "github.com/pydio/pydio-booster/log"
 )
+
+var log *pydiolog.Logger
+
+func init() {
+	log = pydiolog.New(pydiolog.GetLevel(), "[localio] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
+}
 
 // Open local file node
 func Open(node *pydio.Node, flag int) (*pydio.File, error) {
@@ -40,11 +47,11 @@ func Open(node *pydio.Node, flag int) (*pydio.File, error) {
 	// Opening the file
 	file, err := os.OpenFile(name, flag, 0666)
 	if err != nil {
-		log.Println("Could not open file", err)
+		log.Errorln("Could not open file", err)
 		return nil, err
 	}
 
-	log.Println("Opened file ", name)
+	log.Infoln("Opened file ", name)
 
 	// Creating the handlers
 	if flag&os.O_RDWR != 0 || flag&os.O_WRONLY == 0 {
@@ -52,7 +59,7 @@ func Open(node *pydio.Node, flag int) (*pydio.File, error) {
 	}
 
 	if flag&os.O_WRONLY != 0 || flag&os.O_RDWR != 0 {
-		log.Println("We have a write handler")
+		log.Infoln("We have a write handler")
 		writer = writeHandler(file)
 	}
 

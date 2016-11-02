@@ -1,3 +1,4 @@
+// Package pydioupload contains the logic for the pydioupload caddy directive
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -23,7 +24,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -37,6 +37,7 @@ import (
 	"github.com/pydio/pydio-booster/io"
 	"github.com/pydio/pydio-booster/io/localio"
 	"github.com/pydio/pydio-booster/io/s3io"
+	"github.com/pydio/pydio-booster/log"
 	"github.com/pydio/pydio-booster/worker"
 )
 
@@ -50,7 +51,7 @@ type Handler struct {
 // ServerHTTP Requests for uploading files to the server
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
 
-	log.Println("PydioUpload: ServeHTTP")
+	logger.Debugln("PydioUpload: ServeHTTP")
 
 	switch r.Method {
 	case http.MethodOptions:
@@ -66,7 +67,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error)
 				res := errHandle(r, handle(r, h.Dispatcher))
 
 				if res.Err != nil {
-					log.Println("Pydio Upload returns an error : ", res.Err)
+					logger.Errorln("Pydio Upload returns an error : ", res.Err)
 					return http.StatusUnauthorized, res.Err
 				}
 
@@ -106,13 +107,13 @@ func handle(r *http.Request, d *pydioworker.Dispatcher) func() *pydhttp.Status {
 
 	return func() *pydhttp.Status {
 
-		log.Println("[REQ:UPLOAD] START")
+		logger.Infoln("REQ START")
 
 		start := time.Now()
 
 		defer func() {
 			elapsed := time.Since(start)
-			log.Printf("[REQ:UPLOAD] END took %s", elapsed)
+			logger.Infoln("REQ END took %s", elapsed)
 		}()
 
 		ctx := r.Context()
@@ -174,7 +175,7 @@ func handle(r *http.Request, d *pydioworker.Dispatcher) func() *pydhttp.Status {
 				if err = pydhttp.FromContext(ctx, "options", options); err != nil {
 					return pydhttp.NewStatusErr(http.StatusInternalServerError, err)
 				}
-				log.Println("[DEBUG:UPLOAD] Context Options ", options)
+				log.Debugln("Context Options ", options)
 
 				// Retrieving request options
 				if options.PartialUpload {
@@ -199,7 +200,6 @@ func handle(r *http.Request, d *pydioworker.Dispatcher) func() *pydhttp.Status {
 				var file *pydio.File
 				if options.FileOptions.Type == "fs" {
 					localNode := pydio.NewNode("local", options.FileOptions.Path, dir, name)
-					log.Println("HERE ", options.FileOptions.Path, options.Path, name, localNode)
 					file, err = localio.Open(localNode, os.O_CREATE|os.O_WRONLY)
 				} else if options.FileOptions.Type == "s3" {
 					file, err = s3io.Open(node, os.O_CREATE|os.O_WRONLY)
@@ -246,7 +246,8 @@ func handle(r *http.Request, d *pydioworker.Dispatcher) func() *pydhttp.Status {
 			}
 		}
 
-		log.Println("[DEBUG:UPLOAD] ", ctx.Value("node"))
+		logger.Debugln(ctx.Value("node"))
+
 		return pydhttp.NewStatusOK(r, ctx)
 	}
 }

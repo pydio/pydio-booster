@@ -1,3 +1,4 @@
+// Package websocket contains the code to create and handle a Pydio websocket connection
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -26,13 +27,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"strings"
 
 	"github.com/nsqio/go-nsq"
 	"github.com/nu7hatch/gouuid"
 	"github.com/pydio/pydio-booster/com"
 	"github.com/pydio/pydio-booster/io"
+
+	pydiolog "github.com/pydio/pydio-booster/log"
 )
 
 // Connection details of a websocket
@@ -46,6 +48,8 @@ type Connection struct {
 
 	Incoming io.Reader
 	Outgoing io.Writer
+
+	Logger *pydiolog.Logger
 }
 
 // PydioInstantMessage format
@@ -58,6 +62,7 @@ type PydioInstantMessage struct {
 
 // NewConnection via a websocket
 func NewConnection(u *pydio.User, incoming io.Reader, outgoing io.Writer) (*Connection, error) {
+
 	// Creating a Unique ID for the connection
 	u4, err := uuid.NewV4()
 	if err != nil {
@@ -83,6 +88,8 @@ func NewConnection(u *pydio.User, incoming io.Reader, outgoing io.Writer) (*Conn
 		ExitChan: exitChan,
 		Incoming: rc,
 		Outgoing: wc,
+
+		Logger: pydiolog.New(pydiolog.GetLevel(), "[ws] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds),
 	}
 
 	// Create the incoming handler
@@ -97,13 +104,13 @@ func NewConnection(u *pydio.User, incoming io.Reader, outgoing io.Writer) (*Conn
 			if strings.Index(text, "register") == 0 {
 				repoID := strings.TrimPrefix(text, "register:")
 				connection.Repo = connection.User.GetRepo(repoID)
-				log.SetPrefix(fmt.Sprintf("[ws %s]", connection.String()))
-				log.Println("Register", repoID, connection.User.Repos)
+				connection.Logger.SetPrefix(fmt.Sprintf("[ws %s] ", connection))
+				connection.Logger.Infof("Register %s %v", repoID, connection.User.Repos)
 			} else if strings.Index(text, "unregister") == 0 {
 				// Retrieving a nil value
 				connection.Repo = connection.User.GetRepo("")
-				log.SetPrefix(fmt.Sprintf("[ws %s]", connection.String()))
-				log.Println("Unregister")
+				connection.Logger.Infof("Unregister", connection)
+				connection.Logger.SetPrefix("[ws] ")
 			}
 		}
 	}()
@@ -127,11 +134,13 @@ func NewConnection(u *pydio.User, incoming io.Reader, outgoing io.Writer) (*Conn
 			repo := connection.Repo
 
 			if repo == nil {
+				connection.Logger.Debugln("Returning - Empty repository")
 				return nil
 			}
 
 			err := json.Unmarshal(body, &pm)
 			if err != nil {
+				connection.Logger.Errorln(err)
 				return err
 			}
 
@@ -143,6 +152,8 @@ func NewConnection(u *pydio.User, incoming io.Reader, outgoing io.Writer) (*Conn
 				if pm.GroupPath != "" && pm.GroupPath != user.GroupPath {
 					return nil
 				}
+
+				connection.Logger.Debugf("Writing to websocket : %s", pm.XMLContent)
 
 				writer.Write([]byte(pm.XMLContent + "\n"))
 			}

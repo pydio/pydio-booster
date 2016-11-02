@@ -39,6 +39,12 @@ const (
 	VersionDate string = "##BUILD_VERSION_DATE##"
 )
 
+// LogConf definition
+type LogConf struct {
+	Level int
+	File  string
+}
+
 // NsqConf definition
 type NsqConf struct {
 	Host string

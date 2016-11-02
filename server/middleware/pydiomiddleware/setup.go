@@ -1,3 +1,4 @@
+// Package pydiomiddleware contains the logic for a middleware directive (repetitive task done for a Pydio request)
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -27,7 +28,15 @@ import (
 	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"github.com/pydio/pydio-booster/http"
+
+	pydiolog "github.com/pydio/pydio-booster/log"
 )
+
+var logger *pydiolog.Logger
+
+func init() {
+	logger = pydiolog.New(pydiolog.GetLevel(), "[pydiomiddleware] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
+}
 
 // Parse the middleware rules
 func Parse(c *caddy.Controller, path string, middlewares ...string) (rules map[string][]Rule, err error) {

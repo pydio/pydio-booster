@@ -1,3 +1,4 @@
+// Package pydiomiddleware contains the logic for a middleware directive (repetitive task done for a Pydio request)
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -23,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log"
 	"net/url"
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
@@ -66,7 +66,7 @@ func NewAuthJob(
 
 			err := encoder.Encode(a)
 			if err != nil {
-				log.Println("[ERROR:MW] Could not encode auth")
+				logger.Errorln("Could not encode auth")
 			}
 
 			return nil

@@ -1,3 +1,4 @@
+// Package websocket contains the code to create and handle a Pydio websocket connection
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -22,26 +23,37 @@ package websocket
 import (
 	"bufio"
 	"io"
+	"io/ioutil"
+	"log"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/pydio/pydio-booster/com"
+	pydioconf "github.com/pydio/pydio-booster/conf"
 	pydio "github.com/pydio/pydio-booster/io"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 var (
-	fakeUser  *pydio.User
-	fakeToken string
+	fakeUser    *pydio.User
+	fakeToken   string
+	fakeMessage com.Message
 
 	secret string
 )
 
 func init() {
+
+	log.SetFlags(0)
+	log.SetOutput(ioutil.Discard)
+
 	secret = "TestingSecret"
 
-	com.NewCom()
-	com.NewProducer()
+	com.NewCom(&pydioconf.NsqConf{
+		Host: "localhost",
+		Port: 4150,
+	})
 
 	fakeUser = &pydio.User{
 		ID:        "test",
@@ -50,6 +62,14 @@ func init() {
 			{ID: "test"},
 		},
 	}
+
+	fakeMessage = com.Message{
+		Topic:   "im",
+		Content: []byte("{\"REPO_ID\":\"test\", \"CONTENT\":\"This is a simple test\"}"),
+	}
+
+	log.SetFlags(0)
+	log.SetOutput(ioutil.Discard)
 
 	fakeToken = generateTmpJWT()
 }
@@ -81,8 +101,10 @@ func waitForResponse(reader io.Reader, writer io.Writer) string {
 
 func TestSuccess(t *testing.T) {
 
-	Convey("Testing a websocket connection", t, func() {
+	com.NewProducer()
+	defer com.StopProducer()
 
+	Convey("Testing a websocket connection", t, func() {
 		reqr, reqw := io.Pipe()
 		defer reqw.Close()
 
@@ -151,5 +173,47 @@ func TestSuccess(t *testing.T) {
 			Content: []byte("{\"REPO_ID\":\"test\", \"GROUP_PATH\":\"test\", \"CONTENT\":\"This is a simple test\"}"),
 		})
 		So(waitForResponse(respr, respw), ShouldEqual, "This is a simple test")
+	})
+}
+
+func BenchmarkPublish(b *testing.B) {
+
+	com.NewProducer()
+	defer com.StopProducer()
+
+	reqr, reqw := io.Pipe()
+	defer reqw.Close()
+
+	_, respw := io.Pipe()
+	defer respw.Close()
+
+	connection, _ := NewConnection(fakeUser, reqr, respw)
+
+	Convey("Testing a websocket connection", b, func() {
+
+		reqw.Write([]byte("register:test\n"))
+		So(connection.Repo, ShouldNotBeNil)
+		So(connection.Repo.ID, ShouldEqual, "test")
+
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				com.Publish(fakeMessage)
+			}
+		})
+	})
+}
+
+func BenchmarkConsume(b *testing.B) {
+	Convey("Testing a websocket connection receiver", b, func() {
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				reqr, reqw := io.Pipe()
+				defer reqw.Close()
+
+				NewConnection(fakeUser, reqr, os.Stdout)
+				reqw.Write([]byte("register:test\n"))
+
+			}
+		})
 	})
 }

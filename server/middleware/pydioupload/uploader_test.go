@@ -1,3 +1,4 @@
+// Package pydioupload contains the logic for the pydioupload caddy directive
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -86,17 +87,8 @@ func TestUpload_ServeHTTP(t *testing.T) {
 			tempFName2 := RandomString(10)
 
 			// Creating nodes
-			node1 := pydio.Node{
-				Repo:     pydio.Repo{ID: "my-files"},
-				Dir:      pydio.Dir{},
-				Basename: tempFName,
-			}
-
-			node2 := pydio.Node{
-				Repo:     pydio.Repo{ID: "my-files"},
-				Dir:      pydio.Dir{},
-				Basename: tempFName2,
-			}
+			node1 := pydio.NewNode("my-files", tempFName)
+			node2 := pydio.NewNode("my-files", tempFName2)
 
 			// Creating Multipart POST data
 			body := &bytes.Buffer{}
@@ -131,11 +123,7 @@ func TestUpload_ServeHTTP(t *testing.T) {
 			tempFName := RandomString(10)
 
 			// Creating node
-			node := pydio.Node{
-				Repo:     pydio.Repo{ID: "my-files"},
-				Dir:      pydio.Dir{},
-				Basename: tempFName,
-			}
+			node := pydio.NewNode("my-files", tempFName)
 
 			uri := fmt.Sprintf("/upload/%s%s", node.Repo.ID, node.Dir.String())
 
@@ -198,11 +186,7 @@ func TestUpload_ServeHTTP(t *testing.T) {
 			tempFName := RandomString(10)
 
 			// Creating node
-			node := pydio.Node{
-				Repo:     pydio.Repo{ID: "s3"},
-				Dir:      pydio.Dir{},
-				Basename: tempFName,
-			}
+			node := pydio.NewNode("s3", tempFName)
 
 			// Creating Multipart POST data
 			body := &bytes.Buffer{}

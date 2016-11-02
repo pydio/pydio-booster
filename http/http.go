@@ -1,3 +1,4 @@
+// Package pydhttp contains all http related work
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -22,7 +23,6 @@ package pydhttp
 import (
 	"crypto/tls"
 	"errors"
-	"log"
 	"net/http"
 )
 
@@ -54,13 +54,11 @@ func (c *Client) Do(req *http.Request) (resp *http.Response, err error) {
 	resp, err = (*http.Client)(c).Do(req)
 
 	if err != nil {
-		log.Println("Error while sending request ", err)
 		return
 	}
 
 	if shouldRedirectGet(resp.StatusCode) {
 		if loc, err := resp.Location(); err == nil {
-			log.Println("Redirecting to ", loc)
 			req.URL = loc
 			return c.Do(req)
 		}

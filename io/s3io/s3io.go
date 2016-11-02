@@ -1,3 +1,4 @@
+// Package s3io contains all logic for dealing with s3 files
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -25,7 +26,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -38,6 +38,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pydio/pydio-booster/io"
+
+	pydiolog "github.com/pydio/pydio-booster/log"
 )
 
 type s3writer struct {
@@ -46,6 +48,12 @@ type s3writer struct {
 	wwait      sync.Cond
 
 	*io.PipeWriter
+}
+
+var log *pydiolog.Logger
+
+func init() {
+	log = pydiolog.New(pydiolog.GetLevel(), "[s3io] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
 }
 
 // Open S3 node as a file
@@ -70,8 +78,6 @@ func Open(node *pydio.Node, flag int) (*pydio.File, error) {
 		fmt.Println("failed to create session,", err)
 		return nil, err
 	}
-
-	log.Println(sess)
 
 	// Creating the handlers
 	if flag&os.O_RDWR != 0 || flag&os.O_WRONLY == 0 {
@@ -113,7 +119,7 @@ func readHandler(sess *session.Session, name string, bucket string) *pydio.Reade
 		})
 
 		if err != nil {
-			log.Println(err.Error())
+			log.Errorln(err.Error())
 			reader.CloseWithError(errors.New("Could not read from file"))
 			return
 		}
@@ -133,13 +139,8 @@ func writeHandler(sess *session.Session, name string, bucket string, lock chan (
 	go func() {
 		// Releasing the lock
 		defer func() {
-			log.Println("Closing reader")
 			reader.Close()
-
-			log.Println("Closing s3")
 			lock <- 1
-
-			log.Println("After reader")
 		}()
 
 		uploader := s3manager.NewUploader(sess)
@@ -151,12 +152,12 @@ func writeHandler(sess *session.Session, name string, bucket string, lock chan (
 		})
 
 		if err != nil {
-			log.Println("We have an error ", err.Error())
+			log.Errorln(err.Error())
 			writer.CloseWithError(err)
 			return
 		}
 
-		log.Println("Successfully uploaded to ", result.Location)
+		log.Infoln("Successfully uploaded to ", result.Location)
 	}()
 
 	return newS3Writer(writer)
@@ -187,7 +188,7 @@ func appendHandler(sess *session.Session, name string, bucket string, lock chan 
 		}
 
 		if createOutput, err = s3Client.CreateMultipartUpload(createInput); err != nil {
-			log.Println(err.Error())
+			log.Errorln(err.Error())
 			writer.CloseWithError(err)
 			return
 		}
@@ -204,7 +205,7 @@ func appendHandler(sess *session.Session, name string, bucket string, lock chan 
 		}
 
 		if uploadPart1CopyOutput, err = s3Client.UploadPartCopy(uploadPart1CopyInput); err != nil {
-			log.Println(err.Error())
+			log.Errorln(err.Error())
 			writer.CloseWithError(err)
 			return
 		}
@@ -227,7 +228,7 @@ func appendHandler(sess *session.Session, name string, bucket string, lock chan 
 		}
 
 		if uploadPart2Output, err = s3Client.UploadPart(uploadPart2Input); err != nil {
-			log.Println(err.Error())
+			log.Errorln(err.Error())
 			writer.CloseWithError(err)
 			return
 		}
@@ -246,12 +247,12 @@ func appendHandler(sess *session.Session, name string, bucket string, lock chan 
 		}
 
 		if completeUploadOutput, err = s3Client.CompleteMultipartUpload(completeUploadInput); err != nil {
-			log.Println(err.Error())
+			log.Errorln(err.Error())
 			writer.CloseWithError(err)
 			return
 		}
 
-		log.Println("Successul upload ", completeUploadOutput)
+		log.Infoln("Successul upload ", completeUploadOutput)
 	}()
 
 	return newS3Writer(writer)

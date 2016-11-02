@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	"github.com/nsqio/go-nsq"
-	. "github.com/smartystreets/goconvey/convey"
 	"github.com/pydio/pydio-booster/conf"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestConsumer(t *testing.T) {
@@ -50,7 +50,7 @@ func TestConsumer(t *testing.T) {
 		conf := new(conf.NsqConf)
 		conf.Host = "0.0.0.0"
 		conf.Port = 4150
-		NewCom(&conf)
+		NewCom(conf)
 		defer Close()
 
 		c, err := NewConsumer("test", "test")
@@ -81,7 +81,7 @@ func TestCommunicationAPI(t *testing.T) {
 	conf := new(conf.NsqConf)
 	conf.Host = "0.0.0.0"
 	conf.Port = 4150
-	NewCom(&conf)
+	NewCom(conf)
 
 	defer Close()
 

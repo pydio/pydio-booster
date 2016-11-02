@@ -1,3 +1,4 @@
+// Package pydiomiddleware contains the logic for a middleware directive (repetitive task done for a Pydio request)
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -23,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -50,7 +50,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error)
 	case http.MethodGet, http.MethodPost, http.MethodPut:
 		for _, rule := range h.Rules {
 			if !rule.Matcher.Match(r) {
-				log.Println("[ERROR:MW] Not a match")
+				logger.Errorln("Not a match")
 				continue
 			}
 
@@ -65,7 +65,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error)
 				ctx, statusCode, err := handle(&rule, h.Dispatcher, w, r, cancel)
 
 				if err != nil || statusCode != 0 {
-					log.Println("got a status code returned ", statusCode, err)
+					if err != nil {
+						logger.Errorln("got an error returned ", statusCode, err)
+					} else {
+						logger.Infoln("got a status code ", statusCode)
+					}
 					return statusCode, err
 				}
 
@@ -81,13 +85,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error)
 
 func handle(rule *Rule, d *pydioworker.Dispatcher, w http.ResponseWriter, r *http.Request, cancel func()) (context.Context, int, error) {
 
-	log.Println("[REQ:MW] START")
+	logger.Infoln("START")
 
 	start := time.Now()
 
 	defer func() {
 		elapsed := time.Since(start)
-		log.Printf("[REQ:MW] END - took %s", elapsed)
+		logger.Infoln("END - took %s", elapsed)
 	}()
 
 	/**********************************************
@@ -120,7 +124,7 @@ func handle(rule *Rule, d *pydioworker.Dispatcher, w http.ResponseWriter, r *htt
 			replacer.Set(fmt.Sprint(i), matches[i])
 		}
 
-		log.Println("[INFO:MW] We have a replacer here ", replacer, rule.Regexp, matches)
+		logger.Debugln("[INFO:MW] We have a replacer here ", replacer, rule.Regexp, matches)
 	}
 
 	// Matching potential headers to forward
@@ -163,7 +167,7 @@ func handle(rule *Rule, d *pydioworker.Dispatcher, w http.ResponseWriter, r *htt
 		}
 	}
 
-	log.Printf("[INFO:MW] Working with %s", url.String())
+	logger.Debugf("Working with %s", url.String())
 	var job pydioworker.Job
 	var err error
 	switch rule.QueryType {
@@ -193,7 +197,7 @@ func getContextNode(ctx context.Context) (*pydio.Node, error) {
 
 	node := &pydio.Node{}
 	if err := pydhttp.FromContext(ctx, "node", node); err != nil {
-		log.Println("PydioPre : Could not decode to Node ", err)
+		logger.Errorln("Could not decode to Node ", err)
 		return nil, err
 	}
 
@@ -205,14 +209,14 @@ func getContextAuthParams(ctx context.Context, url string) (auth *pydhttp.Auth, 
 	// Retrieving auth from headers
 	auth = &pydhttp.Auth{}
 	if err = pydhttp.FromContext(ctx, "auth", auth); err != nil {
-		log.Println("PydioPre : Could not decode to auth")
+		logger.Errorln("Could not decode to auth")
 	}
 
 	if auth.Token == "" {
 		// Retrieving token from headers
 		var token = &pydhttp.Token{}
 		if err = pydhttp.FromContext(ctx, "token", token); err != nil {
-			log.Println("PydioPre : Could not decode to token ", err)
+			logger.Errorln("Could not decode to token ", err)
 			return nil, err
 		}
 

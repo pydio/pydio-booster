@@ -1,4 +1,4 @@
-/*
+/*Package com controls the communication layer of the Pydio app
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
  *
@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	Producer *nsq.Producer
+	producer *nsq.Producer
 )
 
 // NewProducer that writes on the standard communication channel
@@ -42,13 +42,13 @@ func NewProducer() error {
 		return err
 	}
 
-	Producer = p
+	producer = p
 	return nil
 }
 
 // Publish a message to the standard communication channel
 func Publish(m Message) error {
-	err := Producer.Publish(m.Topic, m.Content)
+	err := producer.Publish(m.Topic, m.Content)
 
 	return err
 }
@@ -58,7 +58,7 @@ func StopProducer() error {
 	if !IsRunning() {
 		return errors.New("NSQ must be running")
 	}
-	Producer.Stop()
+	producer.Stop()
 
 	return nil
 }

@@ -1,3 +1,4 @@
+// Package pydiomiddleware contains the logic for a middleware directive (repetitive task done for a Pydio request)
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -25,7 +26,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -63,7 +63,7 @@ func (j *RequestJob) Do() (err error) {
 	}
 
 	if resp.StatusCode != http.StatusOK || err != nil {
-		log.Printf("[ERROR] Not authorized : %v %v", j.Request, resp)
+		logger.Errorf("Not authorized : %v %v", j.Request, resp)
 		j.ErrorFunc()
 		return err
 	}
@@ -87,11 +87,11 @@ func NewRequestJob(
 ) (pydioworker.Job, error) {
 
 	queryArgs := u.Query()
-	log.Println("[REQ:MW] Request Job Start", u, headers, queryArgs, out)
+	logger.Infoln("Request Job Start", u, headers, queryArgs, out)
 
 	node, err := getContextNode(ctx)
 	if err == nil {
-		log.Println("[INFO:MW] Request : Retrieved node ", node.Repo)
+		logger.Debugln("Request : Retrieved node ", node.Repo)
 		var repo *url.URL
 		var dir *url.URL
 
@@ -102,9 +102,9 @@ func NewRequestJob(
 		replacer.Set("nodedir", dir.String())
 		replacer.Set("nodename", node.Basename)
 
-		log.Println("[INFO:MW] Request : Replacer is set ", replacer)
+		logger.Debugln("Request : Replacer is set ", replacer)
 	} else {
-		log.Println("[ERROR:MW] Request : Could not read node")
+		logger.Errorln("Request : Could not read node")
 	}
 
 	u.Path = replacer.Replace(u.Path)
@@ -122,19 +122,19 @@ func NewRequestJob(
 	u.RawQuery = values.Encode()
 
 	request, _ := http.NewRequest("GET", u.String(), nil)
-	log.Println("[DEBUG:MW] Doing headers")
+	logger.Debugln("Doing headers")
 	for _, header := range headers {
 		request.Header.Add(header[0], replacer.Replace(header[1]))
 	}
 
-	log.Println("[DEBUG:MW] Doing cookies")
+	logger.Debugln("Doing cookies")
 	for _, cookie := range cookies {
 		request.AddCookie(cookie)
 	}
 
 	request.URL = &u
 
-	log.Printf("[DEBUG:MW] URL is %s - headers - %v cookies - %v", u.String(), headers, request.Cookies())
+	logger.Debugf("URL is %s - headers - %v cookies - %v", u.String(), headers, request.Cookies())
 
 	job := &RequestJob{
 		Request:   *request,
@@ -145,7 +145,7 @@ func NewRequestJob(
 			var q query
 			var dec decoder
 
-			log.Println("Out to ", out)
+			logger.Debugln("Out to ", out)
 
 			switch out {
 			case "body":
@@ -158,7 +158,7 @@ func NewRequestJob(
 
 				_, err = io.Copy(writer, r)
 				if err != nil {
-					log.Printf("[ERROR:MW] Could not write body %v", err)
+					logger.Errorf("Could not write body %v", err)
 					return err
 				}
 
@@ -193,12 +193,12 @@ func NewRequestJob(
 			// log.Println("Data received ", data)
 
 			if err := dec.Decode(q); err == io.EOF {
-				log.Println("[DEBUG:MW] End of decoding")
+				logger.Debugln("End of decoding")
 			} else if err != nil {
-				log.Println("[ERROR:MW] Request: error while decoding ", err)
+				logger.Errorln("Request: error while decoding ", err)
 				cancel()
 			} else {
-				log.Println("[DEBUG:MW] Done with success ", q)
+				logger.Debugln("Done with success ", q)
 			}
 
 			if user, ok := q.(*UserQuery); ok {

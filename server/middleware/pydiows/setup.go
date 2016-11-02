@@ -1,3 +1,4 @@
+// Package pydiows contains the logic for the pydiows caddy directive
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -24,14 +25,19 @@ import (
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"github.com/pydio/pydio-booster/server/middleware/pydiomiddleware"
 
+	pydiolog "github.com/pydio/pydio-booster/log"
 	pydioworker "github.com/pydio/pydio-booster/worker"
 )
+
+var logger *pydiolog.Logger
 
 func init() {
 	caddy.RegisterPlugin("pydiows", caddy.Plugin{
 		ServerType: "http",
 		Action:     setup,
 	})
+
+	logger = pydiolog.New(pydiolog.GetLevel(), "[pydiows] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
 }
 
 // Setup the Pydio websocket middleware instance.

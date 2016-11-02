@@ -1,3 +1,4 @@
+// Package pydiomiddleware contains the logic for a middleware directive (repetitive task done for a Pydio request)
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -23,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log"
 	"net/url"
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
@@ -61,15 +61,15 @@ func NewNodeJob(
 			q := &PathQuery{}
 
 			if err := path.Unmarshal([]byte(url.Path), q); err != nil {
-				log.Println("[ERROR:MW] NodeJob: ", err)
+				logger.Errorln("NodeJob: ", err)
 				cancel()
 				return err
 			}
 
-			log.Printf("[INFO:MW] Node job: retrieved %v from %s", q.Node, url.Path)
+			logger.Infof("Node job: retrieved %v from %s", q.Node, url.Path)
 
 			if err := encoder.Encode(q.Node); err != nil {
-				log.Println("[ERROR:MW] NodeJob encoding : ", err)
+				logger.Errorln("NodeJob encoding : ", err)
 				cancel()
 				return err
 			}
