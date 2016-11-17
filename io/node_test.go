@@ -35,7 +35,7 @@ var (
 
 func init() {
 	fakeNode = &Node{
-		Repo:     &Repo{"repo"},
+		Repo:     &Repo{ID: "repo"},
 		Dir:      NewDir("dir1"),
 		Basename: "file1.txt",
 	}

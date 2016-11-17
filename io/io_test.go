@@ -39,7 +39,7 @@ func init() {
 		ID:        "test",
 		GroupPath: "test",
 		Repos: []Repo{
-			{ID: "test"},
+			{ID: "test", ACL: "r"},
 		},
 	}
 }

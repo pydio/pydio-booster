@@ -21,18 +21,29 @@
 package pydio
 
 import (
-	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pydio/pydio-booster/encoding/path"
 )
 
 // Repo format definition
 type Repo struct {
-	ID string `xml:"id,attr" json:"id" path:",first:last"`
+	ID  string `xml:"id,attr" json:"id" path:",first:last"`
+	ACL string `xml:"acl,attr" json:"acl"`
 }
 
 type repo Repo
+
+// IsReadable Repo ?
+func (r *Repo) IsReadable() bool {
+	return r != nil && (r.ACL == "" || strings.Contains(r.ACL, "r"))
+}
+
+// IsWritable Repo ?
+func (r *Repo) IsWritable() bool {
+	return r != nil && (r.ACL == "" || strings.Contains(r.ACL, "w"))
+}
 
 // UnmarshalPath implementation
 func (r *Repo) UnmarshalPath(b []byte) (err error) {
@@ -43,7 +54,7 @@ func (r *Repo) UnmarshalPath(b []byte) (err error) {
 		return
 	}
 
-	*r = Repo{string(b)}
+	*r = Repo{ID: string(b)}
 	return
 }
 
@@ -56,11 +67,11 @@ func (r *Repo) UnmarshalQuery(b []byte) (err error) {
 		return
 	}
 
-	*r = Repo{string(b)}
+	*r = Repo{ID: string(b)}
 	return
 }
 
-// UnmarshalJSON structure into a Repo
+/*/ UnmarshalJSON structure into a Repo
 func (r *Repo) UnmarshalJSON(b []byte) (err error) {
 	new, s := repo{}, ""
 
@@ -83,7 +94,7 @@ func (r *Repo) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(nil)
-}
+}*/
 
 // String representation of a repo
 func (r *Repo) String() string {

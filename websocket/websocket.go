@@ -103,14 +103,23 @@ func NewConnection(u *pydio.User, incoming io.Reader, outgoing io.Writer) (*Conn
 
 			if strings.Index(text, "register") == 0 {
 				repoID := strings.TrimPrefix(text, "register:")
-				connection.Repo = connection.User.GetRepo(repoID)
-				connection.Logger.SetPrefix(fmt.Sprintf("[ws %s] ", connection))
-				connection.Logger.Infof("Register %s %v", repoID, connection.User.Repos)
+
+				repo := connection.User.GetRepo(repoID)
+				if !repo.IsReadable() {
+					// Retrieving a nil value
+					connection.Repo = connection.User.GetRepo("")
+					connection.Logger.SetPrefix("[ws] ")
+					connection.Logger.Infof("Register %s : repo is writeonly", repoID)
+				} else {
+					connection.Repo = repo
+					connection.Logger.SetPrefix(fmt.Sprintf("[ws %s] ", connection))
+					connection.Logger.Infof("Register %s %v", repoID, connection.User.Repos)
+				}
 			} else if strings.Index(text, "unregister") == 0 {
 				// Retrieving a nil value
 				connection.Repo = connection.User.GetRepo("")
-				connection.Logger.Infof("Unregister", connection)
 				connection.Logger.SetPrefix("[ws] ")
+				connection.Logger.Infof("Unregister", connection)
 			}
 		}
 	}()
@@ -135,6 +144,11 @@ func NewConnection(u *pydio.User, incoming io.Reader, outgoing io.Writer) (*Conn
 
 			if repo == nil {
 				connection.Logger.Debugln("Returning - Empty repository")
+				return nil
+			}
+
+			if repo.IsReadable() {
+				connection.Logger.Debugln("Returning - Write Only repository")
 				return nil
 			}
 

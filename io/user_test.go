@@ -43,7 +43,7 @@ func init() {
 		<user groupPath="test" id="test">
 			<active_repo id="1" write="1" read="1"/>
 			<repositories>
-				<repo id="test"></repo>
+				<repo id="test" acl="r"></repo>
 			</repositories>
 		</user>
 	</tree>
@@ -65,6 +65,7 @@ func TestUser(t *testing.T) {
 		}
 
 		So(q.User, ShouldResemble, *fakeUser)
+		So(q.User.Repos[0].IsReadable(), ShouldEqual, true)
 	})
 
 	Convey("Unmarshaling user 2", t, func() {
