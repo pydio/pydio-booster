@@ -147,8 +147,8 @@ func NewConnection(u *pydio.User, incoming io.Reader, outgoing io.Writer) (*Conn
 				return nil
 			}
 
-			if repo.IsReadable() {
-				connection.Logger.Debugln("Returning - Write Only repository")
+			if !repo.IsReadable() {
+				connection.Logger.Debugf("Returning - Write Only repository %v", repo)
 				return nil
 			}
 
