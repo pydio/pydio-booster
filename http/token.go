@@ -144,7 +144,7 @@ func (t *Token) GetQueryArgs(uri string) *Auth {
 	}
 
 	replacer := strings.NewReplacer("%2F", "/")
-	uri = replacer.Replace(url.QueryEscape(uri))
+	uri = replacer.Replace(url.PathEscape(uri))
 
 	b := randomString(10)
 
