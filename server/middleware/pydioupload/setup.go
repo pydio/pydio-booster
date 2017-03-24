@@ -43,6 +43,8 @@ func init() {
 // Setup configures a new PydioUpload instance.
 func setup(c *caddy.Controller) error {
 
+	logger = pydiolog.New(pydiolog.GetLevel(), "[pydioupload] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
+
 	cfg := httpserver.GetConfig(c)
 
 	rules, middlewareRules, err := parse(c)

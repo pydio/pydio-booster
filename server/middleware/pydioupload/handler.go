@@ -22,11 +22,11 @@ package pydioupload
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"strconv"
@@ -175,15 +175,21 @@ func handle(r *http.Request, d *pydioworker.Dispatcher) func() *pydhttp.Status {
 				if err = pydhttp.FromContext(ctx, "options", options); err != nil {
 					return pydhttp.NewStatusErr(http.StatusInternalServerError, err)
 				}
-				log.Debugln("Context Options ", options)
+
+				log.Debugln("Context Options ", node, options)
+
+				if options.Path == "" {
+					return pydhttp.NewStatusErr(http.StatusFailedDependency, errors.New("Could not retrieve the context node or context options"))
+				}
 
 				// Retrieving request options
 				if options.PartialUpload {
 					fileName = fmt.Sprintf("%s.dpart", fileName)
 				}
 
-				dir, err := url.QueryUnescape(path.Dir(options.Path))
-				name, err := url.QueryUnescape(path.Base(options.Path))
+				dir := path.Dir(options.Path)
+				name := path.Base(options.Path)
+
 				node = pydio.NewNode(
 					node.Repo.String(),
 					dir,
