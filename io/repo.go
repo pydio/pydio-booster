@@ -21,6 +21,7 @@
 package pydio
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -29,7 +30,7 @@ import (
 
 // Repo format definition
 type Repo struct {
-	ID  string `xml:"id,attr" json:"id" path:",first:last"`
+	ID  string `xml:"id,attr" json:"id" path:",0:1"`
 	ACL string `xml:"acl,attr" json:"acl"`
 }
 
@@ -71,30 +72,15 @@ func (r *Repo) UnmarshalQuery(b []byte) (err error) {
 	return
 }
 
-/*/ UnmarshalJSON structure into a Repo
-func (r *Repo) UnmarshalJSON(b []byte) (err error) {
-	new, s := repo{}, ""
+// Read the node by encoding to its json representation
+func (r *Repo) Read(p []byte) (int, error) {
 
-	if err = json.Unmarshal(b, &new); err == nil {
-		*r = Repo(new)
-		return
-	}
+	data, err := json.Marshal(r)
 
-	if err = json.Unmarshal(b, &s); err == nil {
-		r.ID = s
-	}
+	numBytes := copy(p, data)
 
-	return
+	return numBytes, err
 }
-
-// MarshalJSON representation of user
-func (r *Repo) MarshalJSON() ([]byte, error) {
-	if r.ID != "" {
-		return json.Marshal(r.ID)
-	}
-
-	return json.Marshal(nil)
-}*/
 
 // String representation of a repo
 func (r *Repo) String() string {
