@@ -32,6 +32,7 @@ import (
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	pydhttp "github.com/pydio/pydio-booster/http"
+	"github.com/pydio/pydio-booster/log"
 	pydioworker "github.com/pydio/pydio-booster/worker"
 )
 
@@ -95,8 +96,8 @@ func NewRequestJob(
 		var repo *url.URL
 		var dir *url.URL
 
-		repo = &url.URL{Path: node.Repo.String()}
-		dir = &url.URL{Path: strings.TrimPrefix(node.Dir.String(), "/")}
+		repo = &url.URL{Opaque: node.Repo.String()}
+		dir = &url.URL{Opaque: strings.TrimPrefix(node.Dir.String(), "/")}
 
 		replacer.Set("repo", repo.String())
 		replacer.Set("nodedir", dir.String())
@@ -109,8 +110,15 @@ func NewRequestJob(
 
 	u.Path = replacer.Replace(u.Path)
 
-	values := u.Query()
-	if out != "token" {
+	values := url.Values{}
+	for arg, vals := range u.Query() {
+		for _, val := range vals {
+			log.Debugln(replacer.Replace(val))
+			values.Add(arg, replacer.Replace(val))
+		}
+	}
+
+	if len(cookies) == 0 {
 		if auth, errAuth := getContextAuthParams(ctx, u.Path); errAuth == nil {
 			values.Set("auth_hash", auth.Hash)
 			values.Set("auth_token", auth.Token)
