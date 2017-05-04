@@ -51,12 +51,14 @@ func compareContents(filename string, contents []byte) {
 
 func TestAPI(t *testing.T) {
 
-	u, _ := url.Parse("REPLACE_WITH_PATH") // eg : http://localhost:8080/index.php?get_action=keystore_generate_auth_token
-	api, err := NewAPI(*u, "REPLACE_WITH_COOKIE")
+	u, _ := url.Parse("http://pydio.dev/index.php?get_action=keystore_generate_auth_token") // eg : http://localhost:8080/index.php?get_action=keystore_generate_auth_token
+	api, err := NewAPI(*u, "h95jlt83c4c066igpji4o1pbn3")
 
 	if err != nil {
 		fmt.Printf("Received error %v\n", err)
 	}
+
+	fmt.Println("API now defined ", api)
 
 	Convey("Sending a simple request", t, func() {
 		client := NewClient()
@@ -64,17 +66,16 @@ func TestAPI(t *testing.T) {
 		uri := "/api/pydio/ws_authenticate"
 		auth := api.GetQueryArgs(uri)
 
-		fmt.Printf("Received auth %v\n", api)
+		if auth == nil {
+			fmt.Println("WARNING : Have you set a token")
+		}
+		So(auth, ShouldNotBeNil)
 
 		req, err := http.NewRequest("GET", "REPLACE_WITH_PATH"+uri+"?auth_token="+auth.Token+"&auth_hash="+auth.Hash, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
+		So(err, ShouldBeNil)
 
 		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatal(err)
-		}
+		So(err, ShouldBeNil)
 
 		code := resp.StatusCode
 

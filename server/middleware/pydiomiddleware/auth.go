@@ -22,11 +22,8 @@ package pydiomiddleware
 
 import (
 	"context"
-	"encoding/json"
-	"io"
 	"net/url"
 
-	"github.com/mholt/caddy/caddyhttp/httpserver"
 	pydhttp "github.com/pydio/pydio-booster/http"
 	pydioworker "github.com/pydio/pydio-booster/worker"
 )
@@ -44,11 +41,9 @@ func (j *AuthJob) Do() (err error) {
 // NewAuthJob prepares the job for the middleware request
 // based on the rules
 func NewAuthJob(
-	url url.URL,
 	ctx context.Context,
-	replacer httpserver.Replacer,
-	encoder json.Encoder,
-	writer io.Writer,
+	url url.URL,
+	encoder Encoder,
 	close func() error,
 	cancel func(),
 ) (pydioworker.Job, error) {
@@ -67,7 +62,10 @@ func NewAuthJob(
 			err := encoder.Encode(a)
 			if err != nil {
 				logger.Errorln("Could not encode auth")
+				cancel()
 			}
+
+			logger.Debugln("User token ", a)
 
 			return nil
 		},

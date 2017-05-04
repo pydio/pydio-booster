@@ -21,6 +21,8 @@
 package pydiomiddleware
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -40,6 +42,8 @@ func init() {
 
 // Parse the middleware rules
 func Parse(c *caddy.Controller, path string, middlewares ...string) (rules map[string][]Rule, err error) {
+
+	logger = pydiolog.New(pydiolog.GetLevel(), "[pydiomiddleware] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
 
 	rules = make(map[string][]Rule)
 
@@ -67,6 +71,7 @@ func Parse(c *caddy.Controller, path string, middlewares ...string) (rules map[s
 }
 
 func parseRule(c *caddy.Controller) (Rule, error) {
+
 	var rule Rule
 
 	var matcher httpserver.RequestMatcher
@@ -140,7 +145,26 @@ func parseRule(c *caddy.Controller) (Rule, error) {
 
 		case "out":
 			out := c.RemainingArgs()
-			rule.Out = out[0]
+
+			if len(out) < 2 {
+				rule.Out = Out{
+					Name: out[0],
+					Key:  "body",
+				}
+			} else {
+				rule.Out = Out{
+					Name: out[0],
+					Key:  out[1],
+				}
+			}
+
+			rule.EncoderFunc = func(v interface{}) Encoder {
+				if writer, ok := v.(io.Writer); ok {
+					return json.NewEncoder(writer)
+				}
+
+				return nil
+			}
 		}
 	}
 
@@ -148,3 +172,11 @@ func parseRule(c *caddy.Controller) (Rule, error) {
 
 	return rule, nil
 }
+
+// Encoder interface
+type Encoder interface {
+	Encode(v interface{}) error
+}
+
+// EncoderFunc Adapter
+type EncoderFunc func(v interface{}) Encoder

@@ -27,8 +27,11 @@ package pydiows
 import (
 	"bufio"
 	"bytes"
+	"encoding/xml"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -36,7 +39,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	pydhttp "github.com/pydio/pydio-booster/http"
-	pydio "github.com/pydio/pydio-booster/io"
+	"github.com/pydio/pydio-booster/io"
 	"github.com/pydio/pydio-booster/server/middleware/pydiomiddleware"
 	pydiows "github.com/pydio/pydio-booster/websocket"
 )
@@ -68,6 +71,11 @@ type (
 	Config struct {
 		Path string
 	}
+
+	// UserResponse from the server
+	UserResponse struct {
+		User pydio.User `xml:"user"`
+	}
 )
 
 // ServeHTTP converts the HTTP request to a WebSocket connection and serves it up.
@@ -75,14 +83,13 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 
 	for _, sockconfig := range h.Sockets {
 		if httpserver.Path(r.URL.Path).Matches(sockconfig.Path) {
-			ctx := r.Context()
 
-			err := errHandle(ctx, handle(w, r, &sockconfig))
+			res := errHandle(r, handle(w, r, &sockconfig))
 
-			if err != nil {
-				logger.Errorln("PydioWS returns an error : ", err)
+			if res.Err != nil {
+				logger.Errorln("PydioWS returns an error : ", res.Err)
 
-				return http.StatusUnauthorized, err
+				return http.StatusUnauthorized, res.Err
 			}
 
 			return http.StatusOK, nil
@@ -93,28 +100,35 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 	return h.Next.ServeHTTP(w, r)
 }
 
-func errHandle(ctx context.Context, f func() error) error {
+func errHandle(r *http.Request, f func() *pydhttp.Status) *pydhttp.Status {
 
-	c := make(chan error, 1)
+	ctx := r.Context()
+
+	c := make(chan *pydhttp.Status, 1)
 
 	if err := ctx.Err(); err != nil {
-		return err
+		return pydhttp.NewStatusErr(http.StatusInternalServerError, err)
 	}
 
 	go func() { c <- f() }()
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-c:
-		return err
+		if err := ctx.Err(); err != nil {
+			return pydhttp.NewStatusErr(http.StatusInternalServerError, err)
+		}
+	case res := <-c:
+		return res
 	}
+
+	return pydhttp.NewStatusOK(r)
 }
 
 // serveWS is used for setting and upgrading the HTTP connection to a websocket connection.
 // It also spawns the child process that is associated with matched HTTP path/url.
-func handle(w http.ResponseWriter, r *http.Request, config *Config) func() error {
-	return func() error {
+func handle(w http.ResponseWriter, r *http.Request, config *Config) func() *pydhttp.Status {
+
+	return func() *pydhttp.Status {
 		logger.Infoln("PydioWS : handler START")
 
 		var conn *websocket.Conn
@@ -130,19 +144,18 @@ func handle(w http.ResponseWriter, r *http.Request, config *Config) func() error
 
 		// Retrieving the node
 		logger.Debugln("PydioWS : get context user")
-		var user = &pydio.User{}
-
-		if err = pydhttp.FromContext(ctx, "user", user); err != nil {
-			logger.Errorln("Could not decode to User ", err)
-			return err
+		userResponse := UserResponse{}
+		if err = getValue(ctx, "user", &userResponse); err != nil {
+			return pydhttp.NewStatusErr(http.StatusInternalServerError, err)
 		}
+		user := userResponse.User
 		logger.Debugln("PydioWS : got context user ", user)
 
 		logger.Debugln("PydioWS : Upgrader")
 		conn, err = upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			logger.Errorln("Error upgrading ", err)
-			return err
+			return pydhttp.NewStatusErr(http.StatusInternalServerError, err)
 		}
 
 		defer conn.Close()
@@ -156,9 +169,9 @@ func handle(w http.ResponseWriter, r *http.Request, config *Config) func() error
 		defer respw.Close()
 
 		// Creating Websocket Connection
-		connection, err := pydiows.NewConnection(user, reqr, respw)
+		connection, err := pydiows.NewConnection(&user, reqr, respw)
 		if err != nil {
-			return err
+			return pydhttp.NewStatusErr(http.StatusInternalServerError, err)
 		}
 
 		done := make(chan struct{})
@@ -179,6 +192,30 @@ func handle(w http.ResponseWriter, r *http.Request, config *Config) func() error
 
 		return nil
 	}
+}
+
+// asynchronously retrieve values sitting in the context
+func getValue(ctx context.Context, key string, value interface{}) error {
+
+	// var node *pydio.Node
+	var buf bytes.Buffer
+
+	if err := pydhttp.FromContext(ctx, key, &buf); err != nil {
+		return err
+	}
+
+	data := buf.String()
+	if unquoted, err := strconv.Unquote(strings.Trim(data, "\n")); err == nil {
+		data = unquoted
+	}
+
+	dec := xml.NewDecoder(strings.NewReader(data))
+	if err := dec.Decode(&value); err != nil {
+		logger.Errorf("value for %s : %v", key, err)
+		return err
+	}
+
+	return nil
 }
 
 // pumpStdin handles reading data from the websocket connection and writing

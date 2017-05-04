@@ -22,11 +22,8 @@ package pydiomiddleware
 
 import (
 	"context"
-	"encoding/json"
-	"io"
 	"net/url"
 
-	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"github.com/pydio/pydio-booster/encoding/path"
 	pydioworker "github.com/pydio/pydio-booster/worker"
 )
@@ -44,11 +41,9 @@ func (j *NodeJob) Do() (err error) {
 // NewNodeJob prepares the job for the middleware request
 // based on the rules
 func NewNodeJob(
-	url url.URL,
 	ctx context.Context,
-	replacer httpserver.Replacer,
-	encoder json.Encoder,
-	writer io.Writer,
+	url url.URL,
+	encoder Encoder,
 	close func() error,
 	cancel func(),
 ) (pydioworker.Job, error) {

@@ -22,6 +22,8 @@ package pydioupload
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -30,6 +32,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
@@ -166,13 +169,13 @@ func handle(r *http.Request, d *pydioworker.Dispatcher) func() *pydhttp.Status {
 
 				// Retrieving the node
 				var node = &pydio.Node{}
-				if err = pydhttp.FromContext(ctx, "node", node); err != nil {
+				if err = getValueFromJSON(ctx, "node", node); err != nil {
 					return pydhttp.NewStatusErr(http.StatusInternalServerError, err)
 				}
 
 				// Retrieving the options
 				var options = &pydio.Options{}
-				if err = pydhttp.FromContext(ctx, "options", options); err != nil {
+				if err = getValueFromJSON(ctx, "options", options); err != nil {
 					return pydhttp.NewStatusErr(http.StatusInternalServerError, err)
 				}
 
@@ -199,8 +202,8 @@ func handle(r *http.Request, d *pydioworker.Dispatcher) func() *pydhttp.Status {
 				node.Options = *options
 
 				// Refreshing context
-				ctx = pydhttp.NewContext(ctx, "node", node)
-				ctx = pydhttp.NewContext(ctx, "options", options)
+				//ctx = pydhttp.NewContext(ctx, "node", node)
+				// ctx = pydhttp.NewContext(ctx, "options", options)
 
 				// Local file system, creating the Node
 				var file *pydio.File
@@ -211,21 +214,25 @@ func handle(r *http.Request, d *pydioworker.Dispatcher) func() *pydhttp.Status {
 					file, err = s3io.Open(node, os.O_CREATE|os.O_WRONLY)
 				}
 
-				if err != nil {
-					return pydhttp.NewStatusErr(http.StatusUnauthorized, err)
-				}
-
 				defer func() {
 					if file != nil {
 						file.Close()
 					}
 				}()
 
+				if err != nil {
+					logger.Errorln(err)
+					return pydhttp.NewStatusErr(http.StatusUnauthorized, err)
+				}
+
 				offset := int64(0)
 
+				logger.Debugln("Starting the copy ?")
 				for {
 					var b bytes.Buffer
 					var n int64
+
+					logger.Debugln("Copying")
 
 					// 1 MB buffer
 					n, err = io.CopyN(&b, p, 1*1024*1024)
@@ -256,6 +263,30 @@ func handle(r *http.Request, d *pydioworker.Dispatcher) func() *pydhttp.Status {
 
 		return pydhttp.NewStatusOK(r, ctx)
 	}
+}
+
+// asynchronously retrieve values sitting in the context
+func getValueFromJSON(ctx context.Context, key string, value interface{}) error {
+
+	// var node *pydio.Node
+	var buf bytes.Buffer
+
+	if err := pydhttp.FromContext(ctx, key, &buf); err != nil {
+		return err
+	}
+
+	data := buf.String()
+	if unquoted, err := strconv.Unquote(strings.Trim(data, "\n")); err == nil {
+		data = unquoted
+	}
+
+	dec := json.NewDecoder(strings.NewReader(data))
+	if err := dec.Decode(&value); err != nil {
+		logger.Errorf("value for %s : %v", key, err)
+		return err
+	}
+
+	return nil
 }
 
 // Rule for the uploader

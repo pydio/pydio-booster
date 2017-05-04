@@ -23,6 +23,8 @@ package pydio
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"path"
 
@@ -79,14 +81,22 @@ func NewTmpNode() (*Node, error) {
 func (n *Node) String() string {
 
 	if n.Dir != nil {
-		return fmt.Sprintf("pydio://%s/%s/%s", n.Repo, n.Dir, n.Basename)
+		return fmt.Sprintf("pydio://%s%s/%s", n.Repo, n.Dir, n.Basename)
 	}
 
 	return fmt.Sprintf("pydio://%s/%s", n.Repo, n.Basename)
 }
 
 // Read the node by encoding to its json representation
+func (n *Node) Write(p []byte) (int, error) {
+	log.Printf("HELLO %s\n", p)
+	return len(p), nil
+}
+
+// Read the node by encoding to its json representation
 func (n *Node) Read(p []byte) (int, error) {
+
+	log.Printf("Reading node %s", p)
 
 	data, err := json.Marshal(n)
 
@@ -121,4 +131,24 @@ func (n *Node) UnmarshalQuery(b []byte) (err error) {
 
 	//*n = Node{string(b)}
 	return
+}
+
+// Encoder interface for a node
+type Encoder interface {
+	Encode(v interface{}) error
+}
+
+// Decoder interface for a node
+type Decoder interface {
+	Decode(v interface{}) error
+}
+
+// NewEncoder returns a new encoder that writes to w.
+func NewEncoder(w io.Writer) Encoder {
+	return json.NewEncoder(w)
+}
+
+// NewDecoder returns a new encoder that reads from r.
+func NewDecoder(r io.Reader) Decoder {
+	return json.NewDecoder(r)
 }

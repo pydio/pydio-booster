@@ -138,6 +138,8 @@ func SetLevel(l int) {
 		errorOut = output
 	}
 
+	log.Println("Set Level ", logLevel)
+
 	debugLogger.SetOutput(debugOut)
 	infoLogger.SetOutput(infoOut)
 	errorLogger.SetOutput(errorOut)

@@ -39,7 +39,7 @@ var client = pydhttp.NewClient()
 // RequestJob definition for the uploader
 type RequestJob struct {
 	Request    http.Request
-	HandleFunc func(string, io.Reader, http.Header) error
+	HandleFunc func(string, io.Reader) error
 	ErrorFunc  func()
 }
 
@@ -70,14 +70,14 @@ func (j *RequestJob) Do() (err error) {
 	// For each header, looping through the handling func
 	for header, values := range resp.Header {
 		for _, value := range values {
-			if err := j.HandleFunc(header, strings.NewReader(value), nil); err != nil {
+			if err := j.HandleFunc(header, strings.NewReader(value)); err != nil {
 				return err
 			}
 		}
 	}
 
 	// And finishing with the body
-	return j.HandleFunc("body", resp.Body, resp.Header)
+	return j.HandleFunc("body", resp.Body)
 }
 
 // NewRequestJob prepares the job for the middleware request
@@ -90,7 +90,7 @@ func NewRequestJob(
 	out Out,
 	replacer httpserver.Replacer,
 	encoder Encoder,
-	writer http.ResponseWriter,
+	writer io.Writer,
 	close func() error,
 	cancel func(),
 ) (pydioworker.Job, error) {
@@ -115,8 +115,6 @@ func NewRequestJob(
 	} else {
 		logger.Errorln("Request : Could not read node")
 	}
-
-	logger.Debugln("We have a node ", node)
 
 	// Replacing any potential placeholder
 	u.Path = replacer.Replace(u.Path)
@@ -160,7 +158,7 @@ func NewRequestJob(
 	job := &RequestJob{
 		Request:   *request,
 		ErrorFunc: cancel,
-		HandleFunc: func(key string, body io.Reader, header http.Header) error {
+		HandleFunc: func(key string, r io.Reader) error {
 
 			if key == "body" {
 				// Always finishing by the body
@@ -174,48 +172,77 @@ func NewRequestJob(
 
 			logger.Debugln("Out to ", out)
 
-			switch out.Name {
+			switch out.Key {
 			case "body":
 
 				defer close()
+				// Write response header
+				//writeHeader(w, resp)
 
 				// Write the response body
-				logger.Debugln("Starting to write")
-
-				// Write response header
-				copyHeader(writer.Header(), header)
-
-				_, err = io.Copy(writer, body)
+				_, err = io.Copy(writer, r)
 				if err != nil {
 					logger.Errorf("Could not write body %v", err)
 					return err
 				}
-				logger.Debugln("Ended body write")
 
 				return nil
 			}
+			// case "user":
+			// 	q = &UserQuery{}
+			// 	dec = xml.NewDecoder(r)
+			//
+			// case "proxy":
+			// 	q = &ProxyQuery{}
+			// 	dec = json.NewDecoder(r)
+			//
+			// case "token":
+			// 	q = &TokenQuery{}
+			// 	dec = json.NewDecoder(r)
+			//
+			// case "client":
+			// 	q = &ClientQuery{}
+			// 	dec = json.NewDecoder(r)
+			// }
 
-			data, _ := ioutil.ReadAll(body)
+			data, _ := ioutil.ReadAll(r)
 			logger.Debugln("We have data ", string(data))
 			encoder.Encode(string(data))
+
+			// // DEBUG Display data
+			// data, _ := ioutil.ReadAll(r)
+			// logger.Debugf("Data received : %s", data)
+			//
+			// if err := dec.Decode(q); err == io.EOF {
+			// 	logger.Debugln("End of decoding")
+			// } else if err != nil {
+			// 	logger.Errorln("Request: error while decoding ", err)
+			// 	cancel()
+			// } else {
+			// 	logger.Debugln("Done with success ", q)
+			// }
+			//
+			// if user, ok := q.(*UserQuery); ok {
+			// 	encoder.Encode(user.User)
+			// }
+			// if options, ok := q.(*OptionsQuery); ok {
+			// 	encoder.Encode(options)
+			// }
+			// if proxy, ok := q.(*ProxyQuery); ok {
+			// 	encoder.Encode(proxy)
+			// }
+			// if token, ok := q.(*TokenQuery); ok {
+			// 	encoder.Encode(token)
+			// }
+			// if client, ok := q.(*ClientQuery); ok {
+			// 	encoder.Encode(client)
+			// }
 
 			return nil
 		},
 	}
 
 	return pydioworker.Job(job), nil
-}
-
-func copyHeader(dst, src http.Header) {
-	for k, vv := range src {
-		if _, ok := dst[k]; ok {
-			// otherwise, overwrite
-			dst.Del(k)
-		}
-		for _, v := range vv {
-			dst.Add(k, v)
-		}
-	}
 }
 
 type decoder interface {

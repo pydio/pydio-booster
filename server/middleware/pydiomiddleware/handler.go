@@ -21,12 +21,15 @@
 package pydiomiddleware
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
@@ -104,9 +107,9 @@ func handle(rule *Rule, d *pydioworker.Dispatcher, w http.ResponseWriter, r *htt
 	-- Defining the context variables to be added
 	***********************************************/
 	out := pydhttp.NewContextValue()
-	encoder := json.NewEncoder(out)
+	encoder := rule.EncoderFunc(out)
 
-	ctx = context.WithValue(ctx, rule.Out, out)
+	ctx = context.WithValue(ctx, rule.Out.Name, out)
 
 	// Fill in cookies
 	values := &url.Values{}
@@ -124,7 +127,7 @@ func handle(rule *Rule, d *pydioworker.Dispatcher, w http.ResponseWriter, r *htt
 			replacer.Set(fmt.Sprint(i), matches[i])
 		}
 
-		logger.Debugln("[INFO:MW] We have a replacer here ", replacer, rule.Regexp, matches)
+		logger.Debugln("replacer : ", replacer, rule.Regexp, matches)
 	}
 
 	// Matching potential headers to forward
@@ -167,23 +170,22 @@ func handle(rule *Rule, d *pydioworker.Dispatcher, w http.ResponseWriter, r *htt
 		}
 	}
 
-	logger.Debugf("Working with %s", url.String())
 	var job pydioworker.Job
 	var err error
 	switch rule.QueryType {
 	case "node":
-		job, err = NewNodeJob(url, ctx, replacer, *encoder, w, out.Close, cancel)
+		job, err = NewNodeJob(ctx, url, encoder, out.Close, cancel)
 	case "auth":
-		job, err = NewAuthJob(url, ctx, replacer, *encoder, w, out.Close, cancel)
+		job, err = NewAuthJob(ctx, url, encoder, out.Close, cancel)
 	case "request":
-		job, err = NewRequestJob(url, headers, cookies, rule.Out, ctx, replacer, *encoder, w, out.Close, cancel)
+		job, err = NewRequestJob(ctx, url, headers, cookies, rule.Out, replacer, encoder, w, out.Close, cancel)
 	}
 
 	if err != nil {
 		return nil, http.StatusUnauthorized, err
 	}
 
-	if rule.Out == "body" {
+	if rule.Out.Name == "body" {
 		job.Do()
 		return ctx, http.StatusOK, nil
 	}
@@ -195,8 +197,8 @@ func handle(rule *Rule, d *pydioworker.Dispatcher, w http.ResponseWriter, r *htt
 
 func getContextNode(ctx context.Context) (*pydio.Node, error) {
 
-	node := &pydio.Node{}
-	if err := pydhttp.FromContext(ctx, "node", node); err != nil {
+	var node *pydio.Node
+	if err := getValue(ctx, "node", &node); err != nil {
 		logger.Errorln("Could not decode to Node ", err)
 		return nil, err
 	}
@@ -204,18 +206,21 @@ func getContextNode(ctx context.Context) (*pydio.Node, error) {
 	return node, nil
 }
 
-func getContextAuthParams(ctx context.Context, url string) (auth *pydhttp.Auth, err error) {
+func getContextAuthParams(ctx context.Context, url string) (*pydhttp.Auth, error) {
+
+	var err error
 
 	// Retrieving auth from headers
-	auth = &pydhttp.Auth{}
-	if err = pydhttp.FromContext(ctx, "auth", auth); err != nil {
+	var auth *pydhttp.Auth
+	if err = getValue(ctx, "auth", &auth); err != nil {
 		logger.Errorln("Could not decode to auth")
 	}
 
-	if auth.Token == "" {
+	if auth == nil {
+
 		// Retrieving token from headers
-		var token = &pydhttp.Token{}
-		if err = pydhttp.FromContext(ctx, "token", token); err != nil {
+		var token *pydhttp.Token
+		if err = getValue(ctx, "token", &token); err != nil {
 			logger.Errorln("Could not decode to token ", err)
 			return nil, err
 		}
@@ -223,14 +228,41 @@ func getContextAuthParams(ctx context.Context, url string) (auth *pydhttp.Auth, 
 		// Building Query
 		args := token.GetQueryArgs(url)
 
-		auth.Hash = args.Hash
-		auth.Token = args.Token
+		auth = &pydhttp.Auth{
+			Hash:  args.Hash,
+			Token: args.Token,
+		}
 	}
 
-	return
+	return auth, err
+}
+
+// asynchronously retrieve values sitting in the context
+func getValue(ctx context.Context, key string, value interface{}) error {
+
+	// var node *pydio.Node
+	var buf bytes.Buffer
+
+	if err := pydhttp.FromContext(ctx, key, &buf); err != nil {
+		return err
+	}
+
+	data := buf.String()
+	if unquoted, err := strconv.Unquote(strings.Trim(data, "\n")); err == nil {
+		data = unquoted
+	}
+
+	dec := json.NewDecoder(strings.NewReader(data))
+	if err := dec.Decode(&value); err != nil {
+		logger.Errorf("value for %s : %v", key, err)
+		return err
+	}
+
+	return nil
 }
 
 type (
+
 	// Rule for the Handler
 	Rule struct {
 		Path           string
@@ -243,9 +275,16 @@ type (
 		HeaderMatchers []string
 		Headers        [][2]string
 		QueryType      string
-		Out            string
+		Out            Out
+		EncoderFunc    EncoderFunc
 
 		Matcher httpserver.RequestMatcher
+	}
+
+	// Out values
+	Out struct {
+		Name string
+		Key  string
 	}
 
 	// PathQuery structure

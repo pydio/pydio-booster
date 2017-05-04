@@ -27,6 +27,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -144,6 +145,7 @@ func (t *Token) GetQueryArgs(uri string) *Auth {
 	}
 
 	replacer := strings.NewReplacer("%2F", "/")
+
 	uri = replacer.Replace(url.PathEscape(uri))
 
 	b := randomString(10)
@@ -189,4 +191,9 @@ func (t *Token) JWT(signatureSecret string, hoursBeforeExpiry int) (string, erro
 
 	return str, nil
 
+}
+
+func (t *Token) Write(w io.Writer) {
+	b, _ := json.Marshal(*t)
+	w.Write(b)
 }

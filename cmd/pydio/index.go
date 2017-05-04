@@ -32,6 +32,7 @@ import (
 	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"github.com/mholt/caddy/caddytls"
+
 	"github.com/pydio/pydio-booster/com"
 	"github.com/pydio/pydio-booster/conf"
 	"github.com/pydio/pydio-booster/log"
@@ -40,8 +41,12 @@ import (
 	// List of plugins used in the soft
 	_ "github.com/mholt/caddy/caddyhttp/basicauth"
 	_ "github.com/mholt/caddy/caddyhttp/header"
+	_ "github.com/mholt/caddy/caddyhttp/log"
+	_ "github.com/mholt/caddy/caddyhttp/rewrite"
+	_ "github.com/mholt/caddy/caddyhttp/status"
 	_ "github.com/mholt/caddy/caddyhttp/websocket"
 	_ "github.com/pydio/pydio-booster/server/middleware/pydioadmin"
+	_ "github.com/pydio/pydio-booster/server/middleware/pydiodownload"
 	_ "github.com/pydio/pydio-booster/server/middleware/pydioupload"
 	_ "github.com/pydio/pydio-booster/server/middleware/pydiows"
 )
@@ -94,6 +99,7 @@ func main() {
 
 	// List all directives used and defined by pydio
 	httpserver.RegisterDevDirective("pydioadmin", "")
+	httpserver.RegisterDevDirective("pydiodownload", "")
 	httpserver.RegisterDevDirective("pydioupload", "")
 	httpserver.RegisterDevDirective("pydiows", "")
 
@@ -105,13 +111,6 @@ func main() {
 	config := &Configuration{}
 	err := conf.LoadConfigurationFile(pydioconf, config)
 
-	if err != nil {
-		log.Errorln(err)
-		os.Exit(2)
-	}
-
-	// Start your engines
-	instance, err := caddy.Start(config.Configuration.CaddyFile)
 	if err != nil {
 		log.Errorln(err)
 		os.Exit(2)
@@ -141,6 +140,13 @@ func main() {
 	log.SetLevel(loglevel)
 
 	log.Infof("Set log level to %d", loglevel)
+
+	// Start your engines
+	instance, err := caddy.Start(config.Configuration.CaddyFile)
+	if err != nil {
+		log.Errorln(err)
+		os.Exit(2)
+	}
 
 	if (config.Nsq != conf.NsqConf{}) {
 		// Starting the COM

@@ -20,10 +20,11 @@
 package pydhttp
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
+	"log"
+	"time"
 
 	"golang.org/x/net/context"
 )
@@ -39,20 +40,51 @@ type ContextValue struct {
 	off int64
 }
 
+// Decoder for the context value
+type Decoder interface {
+	Decode(interface{}) error
+}
+
+// Encoder for the context value
+type Encoder interface {
+	Encode(interface{}) error
+}
+
 // NewContext with the key value
-func NewContext(ctx context.Context, key string, value interface{}) context.Context {
+func NewContext(ctx context.Context, key interface{}, value interface{}) context.Context {
 	return context.WithValue(ctx, key, value)
 }
 
 // FromContext value of the given key
-func FromContext(ctx context.Context, key string, value interface{}) (err error) {
+func FromContext(ctx context.Context, key interface{}, value interface{}) (err error) {
 
-	if reader, ok := ctx.Value(key).(io.Reader); ok {
-		dec := json.NewDecoder(reader)
-		err = dec.Decode(value)
-	} else {
-		err = errors.New("Cannot convert this thing to io.Reader")
+	log.Println("Reading from context")
+	c1 := make(chan error, 1)
+	go func() {
+		if reader, ok := ctx.Value(key).(io.Reader); ok {
+			if writer, ok := value.(io.Writer); ok {
+				log.Println("HERE 1 Writer ", value, " Reader ", reader)
+				_, err = io.Copy(writer, reader)
+				c1 <- err
+				log.Println("After HERE 1")
+			} else {
+				log.Println("HERE 2")
+				c1 <- errors.New("Context value receiver is not a writer")
+			}
+		} else {
+			log.Println("HERE 3")
+			c1 <- errors.New("Context value is not a reader")
+		}
+	}()
+
+	log.Println("Listening")
+	select {
+	case err = <-c1:
+	case <-time.After(time.Second * 30):
+		err = errors.New("Cannot convert to io.Reader - Timed out")
 	}
+
+	log.Println("Read from context")
 
 	return
 }
@@ -80,7 +112,7 @@ func (c *ContextValue) Read(p []byte) (n int, err error) {
 		n = len(data)
 
 		c.buf = make([]byte, n)
-		n = copy(c.buf, data)
+		copy(c.buf, data)
 
 		go c.Close()
 	}

@@ -1,4 +1,4 @@
-// Package pydiows contains the logic for the pydiows caddy directive
+// Package pydioupload contains the logic for the pydioupload caddy directive
 /*
  * Copyright 2007-2016 Abstrium <contact (at) pydio.com>
  * This file is part of Pydio.
@@ -18,24 +18,24 @@
  *
  * The latest code can be found at <https://pydio.com/>.
  */
-package pydiows
+package pydioupload
 
 import (
 	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
-	"github.com/pydio/pydio-booster/server/middleware/pydiomiddleware"
 
 	pydiolog "github.com/pydio/pydio-booster/log"
+	"github.com/pydio/pydio-booster/server/middleware/pydiomiddleware"
 	pydioworker "github.com/pydio/pydio-booster/worker"
 )
 
 // PLUGIN name
-const PLUGIN = "pydiows"
+const PLUGIN = "pydiodownload"
 
 var logger *pydiolog.Logger
 
 func init() {
-	caddy.RegisterPlugin("pydiows", caddy.Plugin{
+	caddy.RegisterPlugin(PLUGIN, caddy.Plugin{
 		ServerType: "http",
 		Action:     setup,
 	})
@@ -43,17 +43,19 @@ func init() {
 	logger = pydiolog.New(pydiolog.GetLevel(), "["+PLUGIN+"] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
 }
 
-// Setup the Pydio websocket middleware instance.
+// Setup configures a new PydioUpload instance.
 func setup(c *caddy.Controller) error {
 
 	logger = pydiolog.New(pydiolog.GetLevel(), "["+PLUGIN+"] ", pydiolog.Ldate|pydiolog.Ltime|pydiolog.Lmicroseconds)
 
 	cfg := httpserver.GetConfig(c)
 
-	websocks, middlewareRules, err := webSocketParse(c)
+	rules, middlewareRules, err := parse(c)
 	if err != nil {
 		return err
 	}
+
+	logger.Debugln("Setup - middleware rules ", middlewareRules)
 
 	dispatcher := pydioworker.NewDispatcher(900)
 	dispatcher.Run()
@@ -69,34 +71,43 @@ func setup(c *caddy.Controller) error {
 
 	cfg.AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
 		return &Handler{
-			Next:    next,
-			Sockets: websocks,
+			Next:       next,
+			Rules:      rules,
+			Dispatcher: dispatcher,
+		}
+	})
+
+	// Post Middlewares
+	cfg.AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
+		return &pydiomiddleware.Handler{
+			Next:       next,
+			Rules:      middlewareRules["post"],
+			Dispatcher: dispatcher,
 		}
 	})
 
 	return nil
 }
 
-func webSocketParse(c *caddy.Controller) (websocks []Config, middlewareRules map[string][]pydiomiddleware.Rule, err error) {
+// parses the config from the caddy file
+func parse(c *caddy.Controller) (rules []Rule, middlewareRules map[string][]pydiomiddleware.Rule, err error) {
 
 	for c.Next() {
-		var path string
+		var rule Rule
 
-		// Path or command; not sure which yet
-		if !c.NextArg() {
-			return websocks, nil, c.ArgErr()
+		args := c.RemainingArgs()
+
+		switch len(args) {
+		case 1:
+			rule.Path = args[0]
 		}
-
-		path = c.Val()
-
-		websocks = append(websocks, Config{
-			Path: path,
-		})
 
 		if c.NextBlock() {
-			middlewareRules, _ = pydiomiddleware.Parse(c, path, "pre")
+			middlewareRules, _ = pydiomiddleware.Parse(c, rule.Path, "pre", "post")
 		}
+
+		rules = append(rules, rule)
 	}
 
-	return websocks, middlewareRules, nil
+	return
 }

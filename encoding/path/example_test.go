@@ -72,14 +72,14 @@ func init() {
 	fakeComplexNode = &ComplexNode{
 		R: "my-files",
 		D: Dir{
-			"dir1", "dir2", "dir3",
+			"dir 1", "dir 2", "dir 3",
 		},
 		F: "file1.txt",
 	}
 
 	fakeNode = &Node{
 		R: "my-files",
-		D: []string{"dir1", "dir2", "dir3"},
+		D: []string{"dir 1", "dir 2", "dir 3"},
 		F: "file1.txt",
 	}
 
@@ -88,30 +88,9 @@ func init() {
 	}
 }
 
-/*
-func ExampleMarshal() {
-	type ColorGroup struct {
-		ID     int
-		Name   string
-		Colors []string
-	}
-	group := ColorGroup{
-		ID:     1,
-		Name:   "Reds",
-		Colors: []string{"Crimson", "Red", "Ruby", "Maroon"},
-	}
-	b, err := json.Marshal(group)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-	os.Stdout.Write(b)
-	// Output:
-	// {"ID":1,"Name":"Reds","Colors":["Crimson","Red","Ruby","Maroon"]}
-}*/
-
 func TestUnmarshal(t *testing.T) {
 
-	var urlBlob = []byte(`my-files/dir1/dir2/dir3/file1.txt`)
+	var urlBlob = []byte(`my-files/dir 1/dir 2/dir 3/file1.txt`)
 	Convey("Testing unmarshalling with a simple structure", t, func() {
 		var simpleNode SimpleNode
 		err := Unmarshal(urlBlob, &simpleNode)
@@ -120,7 +99,7 @@ func TestUnmarshal(t *testing.T) {
 		So(simpleNode, ShouldResemble, *fakeSimpleNode)
 	})
 
-	urlBlob = []byte(`my-files/dir1/`)
+	urlBlob = []byte(`my-files/dir 1/`)
 	Convey("Testing unmarshalling with a standard structure", t, func() {
 		var node Node
 		err := Unmarshal(urlBlob, &node)
@@ -129,7 +108,7 @@ func TestUnmarshal(t *testing.T) {
 		So(node.F, ShouldBeEmpty)
 	})
 
-	urlBlob = []byte(`/my-files/dir1/dir2/dir3/file1.txt`)
+	urlBlob = []byte(`/my-files/dir 1/dir 2/dir 3/file1.txt`)
 	Convey("Testing unmarshalling with a simple structure", t, func() {
 		var simpleNode SimpleNode
 		err := Unmarshal(urlBlob, &simpleNode)
@@ -177,5 +156,9 @@ func TestUnmarshal(t *testing.T) {
 
 		err := Unmarshal(urlBlob, &q)
 		So(err, ShouldBeNil)
+	})
+
+	Convey("Testing weird unmarshal", t, func() {
+
 	})
 }
