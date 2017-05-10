@@ -54,8 +54,6 @@ type Handler struct {
 // ServerHTTP Requests for uploading files to the server
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
 
-	logger.Debugln("PydioUpload: ServeHTTP")
-
 	switch r.Method {
 	case http.MethodOptions:
 		for _, rule := range h.Rules {

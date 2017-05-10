@@ -75,6 +75,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error)
 				}
 
 				r = r.WithContext(res.Context)
+
+				return http.StatusOK, nil
 			}
 		}
 	}
@@ -139,8 +141,7 @@ func handle(w http.ResponseWriter, r *http.Request, d *pydioworker.Dispatcher) f
 			return pydhttp.NewStatusErr(http.StatusFailedDependency, errors.New("Could not retrieve the context node or context options"))
 		}
 
-		dir := path.Dir(options.Path)
-		name := path.Base(options.Path)
+		dir, name := path.Split(options.Path)
 
 		node = pydio.NewNode(
 			node.Repo.String(),
@@ -174,6 +175,9 @@ func handle(w http.ResponseWriter, r *http.Request, d *pydioworker.Dispatcher) f
 		}()
 
 		// NEED TO COPY TO BUFFER
+		w.Header().Set("Content-Type", "application/octet-stream");
+		w.Header().Set("Content-Disposition", "attachment; filename=" + name);
+
 		io.Copy(w, file)
 
 		return pydhttp.NewStatusOK(r, ctx)

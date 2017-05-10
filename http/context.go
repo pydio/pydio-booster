@@ -23,7 +23,6 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"log"
 	"time"
 
 	"golang.org/x/net/context"
@@ -58,33 +57,25 @@ func NewContext(ctx context.Context, key interface{}, value interface{}) context
 // FromContext value of the given key
 func FromContext(ctx context.Context, key interface{}, value interface{}) (err error) {
 
-	log.Println("Reading from context")
 	c1 := make(chan error, 1)
 	go func() {
 		if reader, ok := ctx.Value(key).(io.Reader); ok {
 			if writer, ok := value.(io.Writer); ok {
-				log.Println("HERE 1 Writer ", value, " Reader ", reader)
 				_, err = io.Copy(writer, reader)
 				c1 <- err
-				log.Println("After HERE 1")
 			} else {
-				log.Println("HERE 2")
 				c1 <- errors.New("Context value receiver is not a writer")
 			}
 		} else {
-			log.Println("HERE 3")
 			c1 <- errors.New("Context value is not a reader")
 		}
 	}()
 
-	log.Println("Listening")
 	select {
 	case err = <-c1:
 	case <-time.After(time.Second * 30):
 		err = errors.New("Cannot convert to io.Reader - Timed out")
 	}
-
-	log.Println("Read from context")
 
 	return
 }

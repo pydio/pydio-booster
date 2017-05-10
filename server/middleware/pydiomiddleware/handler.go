@@ -152,7 +152,16 @@ func handle(rule *Rule, d *pydioworker.Dispatcher, w http.ResponseWriter, r *htt
 				continue
 			}
 
-			values.Set(key, value[0])
+			if len(value) > 1 {
+				for _, val := range value {
+
+					logger.Debugln("Adding ", key, val)
+					values.Add(key, val)
+				}
+			} else {
+				values.Set(key, value[0])
+			}
+
 		}
 	}
 	url.RawQuery = values.Encode()
